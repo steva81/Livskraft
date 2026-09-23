@@ -1,0 +1,122 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id               String   @id @default(uuid())
+  name             String
+  email            String   @unique
+  password         String?  // For demo credentials
+  mode             String   @default("simple")
+  
+  currentWeight    Float?
+  targetWeight     Float?
+  timeframeWeeks   Int?
+  height           Float?
+  waist            Float?
+  
+  activityLevel    String?
+  stepGoal         Int      @default(8000)
+  
+  dietRestrictions String? // JSON
+  dislikedFoods    String? // JSON
+  lifestyle        String? // JSON
+  
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  
+  dailyLogs        DailyLog[]
+  mealPlans        MealPlan[]
+  workouts         WorkoutLog[]
+  weeklyPlans      WeeklyPlan[]
+}
+
+model DailyLog {
+  id          String   @id @default(uuid())
+  userId      String
+  date        DateTime
+  
+  steps       Int      @default(0)
+  weight      Float?
+  
+  mealsEaten  String?  // JSON
+  workouts    String?  // JSON
+  
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, date])
+}
+
+// 7-Day Plan mapping
+model WeeklyPlan {
+  id          String   @id @default(uuid())
+  userId      String
+  startDate   DateTime
+  endDate     DateTime
+  
+  planDays    PlanDay[]
+  
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model PlanDay {
+  id           String   @id @default(uuid())
+  weeklyPlanId String
+  dayOfWeek    Int      // 0-6 (Sun-Sat)
+  date         DateTime
+  
+  meals        String   // JSON of Recipe IDs or names planned
+  workoutId    String?  // References a Workout id
+  activity     String?  // Notes on activity
+  
+  weeklyPlan   WeeklyPlan @relation(fields: [weeklyPlanId], references: [id], onDelete: Cascade)
+}
+
+// Legacy for backward compatibility with earlier build if needed, though replaced by WeeklyPlan/PlanDay mostly
+model MealPlan {
+  id          String   @id @default(uuid())
+  userId      String
+  startDate   DateTime
+  endDate     DateTime
+  planData    String   // JSON
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// Reusable library of recipes
+model Recipe {
+  id           String   @id @default(uuid())
+  title        String
+  description  String
+  prepTime     Int
+  ingredients  String   // JSON
+  instructions String   // JSON
+  nutrition    String   // JSON { calories, protein, carbs, fat }
+  tags         String   // JSON
+}
+
+// Reusable library of workouts
+model Workout {
+  id          String   @id @default(uuid())
+  title       String
+  type        String   // "home" or "gym"
+  level       String   // "beginner", "intermediate", "advanced"
+  duration    Int      // minutes
+  exercises   String   // JSON [{ name, sets, reps }]
+}
+
+// Log of completed workouts
+model WorkoutLog {
+  id          String   @id @default(uuid())
+  userId      String
+  workoutId   String
+  date        DateTime
+  completed   Boolean  @default(false)
+  notes       String?
+  
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
