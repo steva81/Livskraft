@@ -165,7 +165,8 @@ async function main() {
   await check('shopping unit boundaries, safe conversions and Swedish units', async () => {
     const values=aggregateIngredients([{ingredients:JSON.stringify(['1 gurka','1 gurka','2 lök','4 tsk rapsolja','2 msk rapsolja','2400g krossade tomater','2 st vitlöksklyfta','1 port äggnudlar','1 liter färdigblandad grönsaksbuljong','1 dl ris','100g ris'])}])
     assert(values.includes('2 gurkor'));assert(values.includes('2 lökar'));assert(values.includes('0,5 dl rapsolja'));assert(values.includes('2,4 kg krossade tomater'))
-    assert(values.includes('2 vitlöksklyftor'));assert(values.includes('1 portion äggnudlar'))
+    assert(values.includes('2 vitlöksklyftor'));assert(values.includes('1 portion äggnudlar (mängd enligt förpackningens portionsangivelse)'))
+    assert.deepEqual(aggregateIngredients([{ingredients:'["1 port äggnudlar","2 portioner äggnudlar","100 g äggnudlar"]'}]), ['3 portioner äggnudlar (mängd enligt förpackningens portionsangivelse)','100 g äggnudlar'])
     assert(values.includes('1 dl ris'));assert(values.includes('100 g ris'))
     assert(!values.some(v=>v.includes('g urka')))
   })

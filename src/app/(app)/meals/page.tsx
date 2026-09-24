@@ -1,5 +1,6 @@
 "use client"
 import { displayValue } from "@/lib/display"
+import { clarifyPortionIngredient } from "@/lib/shopping"
 import { useEffect, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -105,7 +106,7 @@ export default function MealsPage() {
                           <p className="font-medium mb-1">Ingredienser · 1 receptportion</p>
                           <ul className="list-disc pl-5 space-y-1">
                             {ingredients.map((item) => (
-                              <li key={item}>{item}</li>
+                              <li key={item}>{clarifyPortionIngredient(item)}</li>
                             ))}
                           </ul>
                         </div>

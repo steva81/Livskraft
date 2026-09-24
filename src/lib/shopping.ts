@@ -5,6 +5,11 @@ const singular = Object.fromEntries(Object.entries(plural).map(([one,many]) => [
 const volume: Record<string, number> = { ml:1, tsk:5, msk:15, dl:100, l:1000, liter:1000 }
 const format = (amount: number) => amount.toLocaleString("sv-SE", {maximumFractionDigits:2})
 
+export function clarifyPortionIngredient(ingredient: string): string {
+  return ingredient.replace(/^(\d+(?:[.,]\d+)?)\s+(?:port|portion|portioner)\s+(.+)$/i,
+    (_, amount: string, name: string) => `${amount} ${Number(amount.replace(",", ".")) === 1 ? "portion" : "portioner"} ${name} (mängd enligt förpackningens portionsangivelse)`)
+}
+
 export function aggregateIngredients(recipes: { ingredients: string }[]): string[] {
   const totals = new Map<string, {amount:number; unit:string; name:string}>()
   const other = new Map<string, number>()
@@ -35,6 +40,6 @@ export function aggregateIngredients(recipes: { ingredients: string }[]): string
     if (unit === "burk" && amount !== 1) unit="burkar"
     if (unit === "portion" && amount !== 1) unit="portioner"
     if (unit === "st" && name in plural) return `${format(amount)} ${amount===1 ? name : plural[name]}`
-    return `${format(amount)} ${unit} ${name}`
+    return clarifyPortionIngredient(`${format(amount)} ${unit} ${name}`)
   }).concat(Array.from(other).map(([item,count]) => `${item} (till ${count} ${count===1 ? "receptportion" : "receptportioner"})`))
 }
