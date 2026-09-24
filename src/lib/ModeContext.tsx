@@ -1,40 +1,42 @@
 "use client"
 
-import React, { createContext, useContext, useState } from "react"
+import { createContext, useContext, useState, useEffect, useCallback } from "react"
 import { useSession } from "next-auth/react"
+import { getUser, saveMode } from "@/app/actions"
 
 type Mode = "simple" | "advanced"
-
-interface AppSession {
-  user?: {
-    id?: string
-    name?: string | null
-    email?: string | null
-  }
-}
 
 interface ModeContextType {
   mode: Mode
   setMode: (mode: Mode) => void
   userId: string | null
+  sessionStatus: "loading" | "authenticated" | "unauthenticated"
 }
 
 const ModeContext = createContext<ModeContextType>({
   mode: "simple",
   setMode: () => {},
   userId: null,
+  sessionStatus: "loading",
 })
 
 export function ModeProvider({ children }: { children: React.ReactNode }) {
-  const [mode, setMode] = useState<Mode>("simple")
-  const { data: session } = useSession()
-
-  // Safely extract the user id that NextAuth places on the session via the callback
-  const typedSession = session as AppSession | null
-  const userId = typedSession?.user?.id ?? null
+  const [mode, updateMode] = useState<Mode>("simple")
+  const { data: session, status } = useSession()
+  const userId = session?.user?.id ?? null
+  useEffect(() => {
+    let active = true
+    updateMode("simple")
+    if (userId) getUser().then(user => { if (active) updateMode(user?.mode === "advanced" ? "advanced" : "simple") })
+    return () => { active = false }
+  }, [userId])
+  const setMode = useCallback((value: Mode) => {
+    updateMode(value)
+    void saveMode(value)
+  }, [])
 
   return (
-    <ModeContext.Provider value={{ mode, setMode, userId }}>
+    <ModeContext.Provider value={{ mode, setMode, userId, sessionStatus: status }}>
       {children}
     </ModeContext.Provider>
   )

@@ -1,75 +1,65 @@
-# Livskraft (Health App Beta)
+# Livskraft – lokal beta
 
-Livskraft ("Life force" / "Vitality") is a modern, personalized health, nutrition, fitness, and everyday-activity web application. The core philosophy is: "Appen anpassar sig efter människan – människan behöver inte anpassa sig efter appen."
+Svensk Next.js 14-app för mat, styrketräning och vardagsrörelse. Befintlig App Router, React 18, TypeScript, Tailwind, Prisma 5 och SQLite har bevarats. Inget har distribuerats.
 
-## Architecture Overview
+## Starta lokalt
 
-- **Frontend**: Next.js 14 (App Router) with React, Tailwind CSS, and shadcn/ui inspired components.
-- **Backend**: Next.js API routes / Server Actions.
-- **Database**: Prisma ORM with SQLite for the beta (easily portable and deployable).
-- **Styling**: Tailwind CSS for responsive, accessible, and theme-able design.
-- **Language**: TypeScript for end-to-end type safety.
+1. Installera en underhållen Node.js-version och kör `npm install`.
+2. Kopiera `.env.example` till `.env`. Ange ett slumpmässigt `NEXTAUTH_SECRET` och `NEXTAUTH_URL=http://localhost:3000`.
+3. Kör `npx prisma generate`, `npx prisma db push` och `npx prisma db seed`.
+4. Kör `npm run dev`. För produktionsläget: `npm run build` och `npm start`.
 
-## Technology Stack
+Seed kompletterar saknade recept och pass utan att radera befintliga användare eller loggar. Befintliga recept med samma titel skrivs inte över. Demokontot är `anna@demo.com` / `password123` och märks i profilen. Skapa ett eget separat konto via onboarding för egna data. Säkerhetskopiera lokal databas före framtida schemaändringar.
 
-- Next.js 14
-- React 18
-- TypeScript
-- Tailwind CSS
-- Prisma (SQLite)
-- Lucide React (Icons)
-- Radix UI (Primitives)
+## Verifierad funktionalitet
 
-## Local Installation
+- NextAuth Credentials med serverkontrollerad JWT-session, middleware och serverkontroll i app-layouten. Server Actions härleder användaren från sessionen.
+- Nya lösenord lagras som saltade scrypt-hashar. Äldre lokala klartextlösenord migreras vid lyckad inloggning; ännu oanvända äldre konton migreras inte automatiskt.
+- Onboarding lagrar vikt, mål, tidsram, längd, midja, övriga mått, aktivitetsnivå, ungefärliga steg, kostval, allergier, ogillad/gillad mat, budget, matlagningstid, arbetstider, familj/resor, kyl/micro, matförberedelse och träningsval.
+- Mål över 1 kg viktnedgång per vecka stoppas på både klient och server med förslag på längre tidsram. Detta är en enkel produktgräns, ingen individuell medicinsk bedömning. Ingen kalorirestriktion räknas fram. Bakgrund: [NHS råd om gradvis viktnedgång](https://www.nhs.uk/live-well/healthy-weight/managing-your-weight/tips-to-help-you-lose-weight/).
+- Måndag–söndag-plan med filtrerade recept, pass och promenadförslag. Träningsnivå, plats, tid och antal dagar styr passvalet. Matlagningstid filtrerar recept; budget och gillad mat ger enkel prioritering. Vardagsval påverkar planens råd. Denna och nästa vecka kan visas.
+- Träningsbibliotek med övningar, set, repetitioner, tid och sparade genomföranden. Korta hemmaalternativ och historik finns.
+- Steg anges som dagens total och lagras i SQLite. Personligt mål, dagshistorik och snitt från loggade dagar visas.
+- Vikt, midja och frivilliga mått kan registreras på Framsteg. Vikttrend jämför två sjudagarsperioder med minst två vägningar i vardera. En enskild vägning ändrar inte planen.
+- Adaptiv Vecka erbjuder hemmainriktning för nästa vecka efter användarens val. Nuvarande vecka skrivs inte över. Avböj påverkar inget i databasen.
+- Idag visar måltider, nästa oavklarade måltid, måltidsmarkeringar, planerat pass, steg, promenad och länk till inköpslistan.
+- Enkelt/avancerat läge sparas per konto och laddas oavsett ingångssida.
+- Recept visar ingredienser och instruktioner. Näringsvärden visas i avancerat läge. Inköpslistan summerar en receptportion per planerad måltid under aktuell vecka, med sammanslagning av samma ingrediens/enhet.
 
-1. Ensure Node.js (v18+) is installed.
-2. Clone the repository and navigate to the project root.
-3. Install dependencies:
-   ```bash
-   npm install
-   ```
-4. Initialize the database and run the seed script to populate demo data:
-   ```bash
-   npx prisma db push
-   npx prisma db seed
-   ```
-5. Start the development server:
-   ```bash
-   npm run dev
-   ```
+## Kostregler och begränsningar
 
-## Environment Variables
+Samma filter används av recept, plan, inköpslista och coachens matalternativ. Äldre sparade planer filtreras igen vid läsning och får aktuella receptnamn. Ingredienser styr; missvisande recepttaggar får inte tillåta vanlig mjölk för veganer eller vetemjöl vid glutenrestriktion. Okända allergier ger inga matförslag. Halal/kosher kräver uttryckligen verifierad receptmärkning; sådana recept saknas för närvarande, så matplanen blir tom medan träning och rörelse finns kvar.
 
-Copy `.env.example` to `.env` (automatically created by Prisma if not present).
+Detta är ett begränsat ingrediensbaserat filter för ett litet demobibliotek, inte en garanti för tillverkares innehåll eller korskontamination. Ingrediensmetadata behöver professionell granskning och fullständig allergenmärkning före en bred beta. Näringsvärden och receptportioner är seed-exempel och är inte dietistgranskade eller individuella energimål. Inga osäkra generiska proteinbyten används av coachen.
 
-```
-# .env
-DATABASE_URL="file:./dev.db"
-```
+## Coach
 
-## Implemented Features (Full Beta)
+Standardläget är deterministiska svenska svar med profil, plan, träning och steg som kontext. Coach ger praktiska alternativ utan kompensationsfasta, straffträning, diagnoser eller läkemedelsdosering. Konversationen sparas inte.
 
-- **Landing Page**: Modern, premium, unaggressive design communicating the core philosophy.
-- **Onboarding Flow**: Multi-step setup gathering goals, dietary restrictions, and lifestyle preferences. Evaluates weight-loss goals for safety.
-- **Database & Persistence**: Wired end-to-end to Prisma (SQLite). User profiles, restrictions, and logs are persisted.
-- **Dashboard ("Idag")**: A clean daily overview connected to DB state. Prioritizes "What do I do next?". Includes Simple vs Advanced view toggling.
-- **Meals & Rules Engine**: Dynamic filtering of recipes based on hard constraints (e.g., lactose-free, vegan) set during onboarding. Includes a generated shopping list.
-- **Training Page**: Supports different training environments (home vs gym) with sets/reps and duration. Allows for quick alternatives if short on time.
-- **Progress Page**: Adaptive Week implementation, analyzing past adherence to propose forward-looking changes, plus visual trends.
-- **AI Coach Mockup**: A conversational interface demonstrating contextual "Life Happens" support, reacting differently to missing ingredients vs missed workouts vs dining out.
-- **Goal Safety System**: Blocks/warns on excessively aggressive weight-loss requests (>1kg/week).
+En framtida serveradapter är förberedd. Med `AI_COACH_LIVE_ENABLED=true`, `AI_API_KEY`, `AI_API_URL` och eventuellt `AI_API_MODEL` kan en OpenAI-kompatibel endpoint klassificera frågans ämne. Endast ett tillåtet ämnesord accepteras; svaret byggs fortfarande av kontrollerade mallar och filtrerade recept. Fritt LLM-genererat kostråd skickas inte till användaren. Anrop har timeout och reservsvar. Extern adapter är inte funktionstestad. Aktivering innebär att profilkontext skickas till den konfigurerade leverantören och behöver ett genomtänkt samtyckes-/integritetsflöde före verklig användning.
 
-## Known Limitations & Future Improvements
+## Kvarvarande förenklingar
 
-- Authentication uses a naive `localStorage` ID token for beta demonstration; requires NextAuth/Auth.js for production.
-- AI Coach responses are deterministic, context-aware mocks.
-- Food tracking and training completion currently use hardcoded toggles or simplified counters.
-- Full dynamic generation of a 7-day meal plan array is approximated via filtered recipes.
+- Planen är regelstyrd med receptrotation, inte optimerad näringsberäkning. Måltidsfördelning är tre huvudmål som justerbar utgångspunkt i rådgivningen; dynamiska måltidsslots och individuella portionsstorlekar saknas.
+- Utrustning och fria kroppsmått lagras men parsas inte till ett detaljerat utrustningsfilter eller mätgraf. Hemmabiblioteket använder kroppsvikt; vissa alternativ använder en bänk/stol. Budgetprioritering använder enkla ingrediensord, inte priser.
+- Receptalternativ kan läsas, men ett specifikt receptbyte i en sparad plan saknar ännu UI. Inköpslistans bockar sparas inte.
+- Adaptiv Vecka är en enkel användarvald hemmavariant, inte en tränad modell. Ett avböjt förslag döljs bara för aktuell sidvisning. Ingen automatisk kalorijustering.
+- Ingen OAuth, e-postverifiering, lösenordsåterställning, produktionsklassad distribuerad inloggningsbegränsning eller wearables.
+- Datum använder serverns lokala tidszon; kör lokal beta i Europe/Stockholm. Explicit användartidszon behövs före AWS.
+- Startsidan är befintlig, enkel och ikonbaserad; en fullständig visuell konsumentproduktgranskning återstår.
 
-## AWS Deployment Considerations
+## Kontroller
 
-To deploy this application to AWS:
+- `npm run lint`
+- `npm run typecheck`
+- `npm run build` – inga ignoreBuildErrors/ignoreDuringBuilds
+- `npm run test:beta` – riktiga databasoperationer med kontrollerad sessionsidentitet; nio testgrupper
+- `npm run test:http` – kör mot `npm start` på port 3000; riktiga NextAuth-sessioner, skyddade sidor och Coach-API för två separata testkonton
 
-1. **Database**: Migrate from SQLite to Amazon RDS (PostgreSQL). Update the `DATABASE_URL` and Prisma schema provider.
-2. **Compute**: Deploy the Next.js application using AWS Amplify Hosting for Next.js, or containerize it using Docker and deploy via Amazon ECS (Fargate).
-3. **Secrets**: Store production secrets (e.g., API keys for the AI service) in AWS Secrets Manager and expose them as environment variables to the container.
+Testerna skapar egna konton med `example.invalid` och städar enbart dessa konton i finally. De återställer inte databas eller seed. Kör dem bara mot lokal beta. HTTP-testet ska köras med extern coach avstängd.
+
+## Integritet och framtida AWS/PostgreSQL
+
+`.env`, SQLite-filer inklusive journal/WAL/SHM och byggfiler ignoreras av Git. Hemligheter används bara på servern. Publik användardata från Server Actions exkluderar lösenord.
+
+SQLite behålls lokalt. Före produktion: inventera beroendeuppdateringar, förstärk inloggningsskydd och kontolivscykel, granska kostmetadata, definiera dataradering/samtycke, sätt användartidszoner, byt Prisma-provider till PostgreSQL, skapa/testa migrationer och använd RDS. Lägg hemligheter i AWS Secrets Manager. Välj därefter hosting för Next.js och testa återställning av säkerhetskopior. Ingen AWS-deploy ingår i detta arbete.

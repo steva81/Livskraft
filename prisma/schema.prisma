@@ -11,7 +11,8 @@ model User {
   id               String   @id @default(uuid())
   name             String
   email            String   @unique
-  password         String?  // For demo credentials
+  password         String?  // Salted scrypt hash; legacy beta values migrated on login
+  preferences      String?  // JSON: practical schedule, equipment, allergies, measurements
   mode             String   @default("simple")
   
   currentWeight    Float?
@@ -22,7 +23,9 @@ model User {
   
   activityLevel    String?
   stepGoal         Int      @default(8000)
-  
+  trainingLocation String   @default("both") // home | gym | both
+  trainingLevel    String   @default("beginner") // beginner | intermediate | advanced
+
   dietRestrictions String? // JSON
   dislikedFoods    String? // JSON
   lifestyle        String? // JSON
@@ -34,6 +37,7 @@ model User {
   mealPlans        MealPlan[]
   workouts         WorkoutLog[]
   weeklyPlans      WeeklyPlan[]
+  adaptiveDecisions AdaptiveDecision[]
 }
 
 model DailyLog {
@@ -42,7 +46,10 @@ model DailyLog {
   date        DateTime
   
   steps       Int      @default(0)
+  stepsRecorded Boolean @default(false)
   weight      Float?
+  waist       Float?
+  measurements String?
   
   mealsEaten  String?  // JSON
   workouts    String?  // JSON
@@ -62,6 +69,17 @@ model WeeklyPlan {
   planDays    PlanDay[]
   
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model AdaptiveDecision {
+  id String @id @default(uuid())
+  userId String
+  targetStart DateTime
+  status String // accepted | declined
+  summary String // JSON with reasons, changes, unchanged fields
+  createdAt DateTime @default(now())
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([userId, targetStart])
 }
 
 model PlanDay {
@@ -106,7 +124,8 @@ model Workout {
   type        String   // "home" or "gym"
   level       String   // "beginner", "intermediate", "advanced"
   duration    Int      // minutes
-  exercises   String   // JSON [{ name, sets, reps }]
+  exercises   String   // JSON [{ name, sets, reps, durationMin? }]
+  logs        WorkoutLog[]
 }
 
 // Log of completed workouts
@@ -117,6 +136,7 @@ model WorkoutLog {
   date        DateTime
   completed   Boolean  @default(false)
   notes       String?
-  
+
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workout     Workout  @relation(fields: [workoutId], references: [id], onDelete: Cascade)
 }

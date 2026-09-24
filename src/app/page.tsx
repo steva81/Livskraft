@@ -19,7 +19,7 @@ export default function LandingPage() {
       <main className="flex-1">
         <section className="w-full py-12 md:py-24 lg:py-32 xl:py-48 bg-primary/5">
           <div className="container px-4 md:px-6">
-            <div className="flex flex-col items-center space-y-4 text-center">
+            <div className="flex flex-col items-center space-y-4 text-center rounded-2xl">
               <div className="space-y-2">
                 <h1 className="text-4xl font-bold tracking-tighter sm:text-5xl md:text-6xl lg:text-7xl">
                   Din plan. Ditt liv. Ditt mål.
@@ -41,8 +41,8 @@ export default function LandingPage() {
 
         <section className="w-full py-12 md:py-24 lg:py-32 bg-white">
           <div className="container px-4 md:px-6">
-            <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-3">
-              <div className="flex flex-col items-center space-y-4 text-center">
+            <div className="grid gap-6 md:grid-cols-3 max-w-6xl mx-auto">
+              <div className="flex flex-col items-center space-y-4 text-center rounded-2xl">
                 <div className="p-4 bg-primary/10 rounded-full">
                   <Salad className="h-10 w-10 text-primary" />
                 </div>
@@ -51,7 +51,7 @@ export default function LandingPage() {
                   God mat som passar din vardag. Inga extrema dieter, bara hållbara vanor med mat du gillar.
                 </p>
               </div>
-              <div className="flex flex-col items-center space-y-4 text-center">
+              <div className="flex flex-col items-center space-y-4 text-center rounded-2xl">
                 <div className="p-4 bg-primary/10 rounded-full">
                   <Activity className="h-10 w-10 text-primary" />
                 </div>
@@ -60,7 +60,7 @@ export default function LandingPage() {
                   Oavsett om du har 15 minuter hemma eller 60 minuter på gymmet, anpassar vi träningen efter dig.
                 </p>
               </div>
-              <div className="flex flex-col items-center space-y-4 text-center">
+              <div className="flex flex-col items-center space-y-4 text-center rounded-2xl">
                 <div className="p-4 bg-primary/10 rounded-full">
                   <Leaf className="h-10 w-10 text-primary" />
                 </div>

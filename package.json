@@ -6,7 +6,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "test:beta": "node tests/beta.cjs",
+    "test:http": "node tests/http.cjs"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",

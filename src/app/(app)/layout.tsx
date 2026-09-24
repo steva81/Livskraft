@@ -1,8 +1,11 @@
 import Link from "next/link"
 import { Home, CalendarDays, Dumbbell, LineChart, MessageCircle, User, ListChecks } from "lucide-react"
 import { ModeProvider } from "@/lib/ModeContext"
+import { getAuthenticatedUserId } from "@/lib/auth"
+import { redirect } from "next/navigation"
 
-export default function AppLayout({ children }: { children: React.ReactNode }) {
+export default async function AppLayout({ children }: { children: React.ReactNode }) {
+  if (!await getAuthenticatedUserId()) redirect("/login")
   return (
     <ModeProvider>
       <div className="flex h-screen bg-gray-50/50">
@@ -27,7 +30,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               </li>
               <li>
                 <Link href="/meals" className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium hover:bg-gray-100">
-                  <CalendarDays className="h-4 w-4" /> Mat &amp; Recept
+                  <CalendarDays className="h-4 w-4" /> Recept
                 </Link>
               </li>
               <li>
@@ -61,6 +64,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <Link href="/dashboard" className="font-bold text-lg text-primary">
               Livskraft
             </Link>
+            <Link href="/meals" className="text-sm">Recept</Link>
+            <Link href="/progress" className="text-sm">Framsteg</Link>
+            <Link href="/profile" className="text-sm">Profil</Link>
           </header>
 
           <div className="flex-1 overflow-y-auto p-4 md:p-8">{children}</div>

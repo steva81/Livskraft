@@ -1,8 +1,10 @@
 "use client"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Card, CardContent, CardFooter } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Send, Leaf } from "lucide-react"
+
+import { getCoachOverview } from "@/app/actions"
 
 interface Message {
   id: number
@@ -26,6 +28,8 @@ export default function CoachPage() {
       text: "Hej! Jag är din Livskraft Coach. Har du frågor om dagens mat, behöver byta ett träningspass, eller vill ha tips för en oväntad situation?",
     },
   ])
+  const [overview, setOverview] = useState<Awaited<ReturnType<typeof getCoachOverview>>>(null)
+  useEffect(() => { getCoachOverview().then(setOverview).catch(() => {}) }, [])
   const [input, setInput] = useState("")
   const [loading, setLoading] = useState(false)
 
@@ -44,7 +48,10 @@ export default function CoachPage() {
         body: JSON.stringify({ message: text }),
       })
       const data = (await res.json()) as { reply?: string; error?: string }
-      const replyText = data.reply ?? "Tyvärr kunde jag inte svara just nu. Försök igen!"
+      const replyText =
+        res.status === 401
+          ? "Du behöver vara inloggad för att prata med coachen."
+          : (data.reply ?? "Tyvärr kunde jag inte svara just nu. Försök igen!")
       setMessages((prev) => [
         ...prev,
         { id: Date.now() + 1, role: "coach", text: replyText },
@@ -65,14 +72,20 @@ export default function CoachPage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto h-[calc(100vh-8rem)] flex flex-col gap-4">
+    <div className="max-w-2xl mx-auto flex flex-col gap-4">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Livskraft Coach</h1>
         <p className="text-muted-foreground">Din personliga guide för kost, träning och vardagsrörelse.</p>
       </div>
 
-      <Card className="flex-1 flex flex-col overflow-hidden">
-        <CardContent className="flex-1 overflow-y-auto p-4 space-y-4">
+      {messages.length===1 && overview && <Card><CardContent className="p-4 space-y-2 text-sm">
+        <p className="font-semibold">Hej {overview.name}, vad behöver du idag?</p>
+        <p>Nästa måltid: {overview.nextMeal??"Alla planerade måltider är klara, eller så saknas matplan."}</p>
+        <p>Träning: {overview.workout??"Vilodag från styrketräning"}</p>
+        <p>{overview.steps.toLocaleString("sv-SE")} av {overview.stepGoal.toLocaleString("sv-SE")} steg</p>
+      </CardContent></Card>}
+      <Card className="flex flex-col overflow-hidden">
+        <CardContent className="max-h-[55vh] overflow-y-auto p-4 space-y-4">
           {messages.map((msg) => (
             <div
               key={msg.id}
@@ -107,6 +120,7 @@ export default function CoachPage() {
           <form onSubmit={handleSubmit} className="flex w-full items-center gap-2">
             <input
               type="text"
+              maxLength={2000} aria-label="Din fråga till coachen"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder="Skriv din fråga…"
