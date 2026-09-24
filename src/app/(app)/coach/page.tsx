@@ -1,10 +1,12 @@
 "use client"
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { Card, CardContent, CardFooter } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Send, Leaf } from "lucide-react"
 
 import { getCoachOverview } from "@/app/actions"
+import { displayValue } from "@/lib/display"
+import { useMode } from "@/lib/ModeContext"
 
 interface Message {
   id: number
@@ -21,6 +23,8 @@ const QUICK_PROMPTS = [
 ]
 
 export default function CoachPage() {
+  const { mode } = useMode()
+  const conversation = useRef<HTMLDivElement>(null)
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 0,
@@ -29,9 +33,13 @@ export default function CoachPage() {
     },
   ])
   const [overview, setOverview] = useState<Awaited<ReturnType<typeof getCoachOverview>>>(null)
-  useEffect(() => { getCoachOverview().then(setOverview).catch(() => {}) }, [])
+  const [overviewError, setOverviewError] = useState(false)
+  useEffect(() => { getCoachOverview().then(setOverview).catch(() => setOverviewError(true)) }, [])
   const [input, setInput] = useState("")
   const [loading, setLoading] = useState(false)
+  useEffect(() => {
+    if (messages.length>1 && conversation.current) conversation.current.scrollTop = conversation.current.scrollHeight
+  }, [messages, loading])
 
   const sendMessage = async (text: string) => {
     if (!text.trim() || loading) return
@@ -72,20 +80,24 @@ export default function CoachPage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto flex flex-col gap-4">
+    <div className="max-w-4xl mx-auto flex flex-col gap-4">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Livskraft Coach</h1>
         <p className="text-muted-foreground">Din personliga guide för kost, träning och vardagsrörelse.</p>
       </div>
 
-      {messages.length===1 && overview && <Card><CardContent className="p-4 space-y-2 text-sm">
+      {overviewError && <p role="status" className="text-sm">Kunde inte läsa dagens översikt. Ladda om sidan för att försöka igen.</p>}
+      {overview && <Card><CardContent className="p-4 space-y-2 text-sm">
         <p className="font-semibold">Hej {overview.name}, vad behöver du idag?</p>
-        <p>Nästa måltid: {overview.nextMeal??"Alla planerade måltider är klara, eller så saknas matplan."}</p>
+        <div className="grid gap-2 sm:grid-cols-3">
+        <p>Nästa måltid: {overview.nextMeal??(overview.hasMealPlan ? "Alla planerade måltider är klara." : "Ingen matplan som matchar din profil just nu.")}</p>
         <p>Träning: {overview.workout??"Vilodag från styrketräning"}</p>
         <p>{overview.steps.toLocaleString("sv-SE")} av {overview.stepGoal.toLocaleString("sv-SE")} steg</p>
+        </div>
+        {mode === "advanced" && <p className="text-muted-foreground">Kostregler: {overview.restrictions.map(displayValue).join(", ") || "Inga angivna"}. Mat du ogillar: {overview.dislikedFoods.join(", ") || "Inga angivna"}.</p>}
       </CardContent></Card>}
       <Card className="flex flex-col overflow-hidden">
-        <CardContent className="max-h-[55vh] overflow-y-auto p-4 space-y-4">
+        <CardContent ref={conversation} role="log" aria-label="Samtal med coachen" aria-live="polite" className="max-h-[50dvh] overflow-y-auto p-4 space-y-4">
           {messages.map((msg) => (
             <div
               key={msg.id}
@@ -124,10 +136,10 @@ export default function CoachPage() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder="Skriv din fråga…"
-              className="flex-1 bg-white border border-input rounded-md h-10 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              className="min-w-0 flex-1 bg-white border border-input rounded-md h-10 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
               disabled={loading}
             />
-            <Button type="submit" size="icon" disabled={loading}>
+            <Button type="submit" size="icon" aria-label="Skicka fråga" disabled={loading || !input.trim()}>
               <Send className="h-4 w-4" />
             </Button>
           </form>
@@ -135,13 +147,14 @@ export default function CoachPage() {
       </Card>
 
       {/* Quick-prompt chips */}
-      <div className="flex flex-wrap gap-2">
+      <p className="text-xs text-muted-foreground">Välj en fråga eller skriv själv. Samtalet sparas inte när du lämnar sidan. Råden utgår från din sparade plan och kostprofil.</p>
+      <div className="grid gap-2 sm:grid-cols-2">
         {QUICK_PROMPTS.map((p) => (
           <button
             key={p}
             onClick={() => sendMessage(p)}
             disabled={loading}
-            className="text-xs bg-white border rounded-full px-3 py-1.5 hover:bg-gray-50 transition disabled:opacity-50"
+            className="text-sm text-left bg-white border rounded-lg px-3 py-3 hover:bg-gray-50 transition disabled:opacity-50"
           >
             {p}
           </button>

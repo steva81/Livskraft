@@ -9,6 +9,7 @@
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "test:beta": "node tests/beta.cjs",
+    "test:product": "node tests/product.cjs",
     "test:http": "node tests/http.cjs"
   },
   "dependencies": {

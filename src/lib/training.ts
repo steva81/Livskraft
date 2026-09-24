@@ -10,11 +10,18 @@ export function levelFits(workoutLevel: string, userLevel: string): boolean {
 // Gym means standard gym access. Free-text equipment applies only at home.
 export function equipmentFits(workout: WorkoutCandidate, homeEquipment: string): boolean {
   if (workout.type === "gym") return true
-  const text = workout.exercises.toLowerCase()
-  const equipment = homeEquipment.toLowerCase()
-  const required = ["hantel", "kettlebell", "gummiband", "skivstång", "pullup", "bänk"]
-  return required.every(item => !text.includes(item) || equipment.includes(item) ||
-    (item === "bänk" && text.includes("vägg eller")))
+  let names: string[]
+  try {
+    const exercises = JSON.parse(workout.exercises) as {name:string}[]
+    if (!Array.isArray(exercises) || exercises.some(ex => typeof ex.name !== "string")) return false
+    names = exercises.map(ex => ex.name.toLowerCase())
+  } catch { names = [workout.exercises.toLowerCase()] }
+  const available = homeEquipment.toLowerCase().replaceAll("hantlar", "hantel").split(/[,;\n]/)
+    .filter(part => !/\b(?:ingen|inga|inget|utan|saknar|inte)\b/.test(part))
+  const required = ["hantel", "kettlebell", "gummiband", "skivstång", "pullup", "bänk", "stol"]
+  return names.every(name => required.every(item => !name.includes(item) ||
+    available.some(part => part.includes(item)) ||
+    (item === "bänk" && /vägg eller (?:stabil )?bänk/.test(name))))
 }
 
 export function workoutFits(workout: WorkoutCandidate, level: string, equipment: string, minutes: number): boolean {

@@ -107,32 +107,32 @@ export default function OnboardingPage() {
           {error && <p role="alert" className="text-sm text-red-700 mb-3">{error}</p>}
           {step === 1 && (
             <div className="space-y-4">
-              <h3 className="text-lg font-medium">Mål & Profil</h3>
+              <h3 className="text-lg font-medium">Mål och profil</h3>
               <div>
                 <label className="text-sm font-medium leading-none">Ditt namn</label>
-                <input type="text" className="w-full p-2 border rounded-md mt-1" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} placeholder="Namn" />
+                <input aria-label="Ditt namn" type="text" className="w-full p-2 border rounded-md mt-1" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} placeholder="Namn" />
               </div>
               <div>
                 <label className="text-sm font-medium leading-none">E-post</label>
-                <input type="email" className="w-full p-2 border rounded-md mt-1" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} placeholder="namn@epost.se" required />
+                <input aria-label="E-post" type="email" className="w-full p-2 border rounded-md mt-1" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} placeholder="namn@epost.se" required />
               </div>
               <div>
                 <label className="text-sm font-medium leading-none">Lösenord</label>
-                <input type="password" className="w-full p-2 border rounded-md mt-1" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} placeholder="Minst 10 tecken" />
+                <input aria-label="Lösenord" type="password" className="w-full p-2 border rounded-md mt-1" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} placeholder="Minst 10 tecken" />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-sm font-medium leading-none">Nuvarande vikt (kg)</label>
-                  <input type="number" className="w-full p-2 border rounded-md mt-1" value={formData.currentWeight} onChange={e => setFormData({...formData, currentWeight: e.target.value})} />
+                  <input aria-label="Nuvarande vikt (kg)" type="number" className="w-full p-2 border rounded-md mt-1" value={formData.currentWeight} onChange={e => setFormData({...formData, currentWeight: e.target.value})} />
                 </div>
                 <div>
                   <label className="text-sm font-medium leading-none">Målvikt (kg)</label>
-                  <input type="number" className="w-full p-2 border rounded-md mt-1" value={formData.targetWeight} onChange={e => setFormData({...formData, targetWeight: e.target.value})} />
+                  <input aria-label="Målvikt (kg)" type="number" className="w-full p-2 border rounded-md mt-1" value={formData.targetWeight} onChange={e => setFormData({...formData, targetWeight: e.target.value})} />
                 </div>
               </div>
               <div>
                 <label className="text-sm font-medium leading-none">Önskad tidsram (veckor)</label>
-                <select className="w-full p-2 border rounded-md mt-1" value={formData.timeframeWeeks} onChange={e => setFormData({...formData, timeframeWeeks: e.target.value})}>
+                <select aria-label="Önskad tidsram (veckor)" className="w-full p-2 border rounded-md mt-1" value={formData.timeframeWeeks} onChange={e => setFormData({...formData, timeframeWeeks: e.target.value})}>
                   <option value="4">4 veckor</option>
                   <option value="8">8 veckor</option>
                   <option value="12">12 veckor</option>
@@ -147,8 +147,8 @@ export default function OnboardingPage() {
 
           {step === 2 && (
             <div className="space-y-4">
-              <h3 className="text-lg font-medium">Kost & Restriktioner (Hårda Regler)</h3>
-              <p className="text-sm text-muted-foreground">Detta används som strikta filter för all mat och alla recept.</p>
+              <h3 className="text-lg font-medium">Kostval och allergier</h3>
+              <p className="text-sm text-muted-foreground">Dina val filtrerar recept, veckoplan och coachens matförslag. Laktosfri kost är inte samma sak som mjölkallergi; ange mjölk under allergier om det gäller dig.</p>
               
               <div className="space-y-2">
                 {["vegetarian", "vegan", "lactose-free", "gluten-free", "halal", "kosher"].map(res => (
@@ -174,7 +174,7 @@ export default function OnboardingPage() {
 
           {step === 3 && (
             <div className="space-y-4">
-              <h3 className="text-lg font-medium">Livsstil & Vardag</h3>
+              <h3 className="text-lg font-medium">Livsstil och vardag</h3>
               <div className="space-y-2">
                 {[
                   { id: "office-worker", label: "Stillasittande arbete" },
@@ -194,7 +194,7 @@ export default function OnboardingPage() {
               
               <div>
                 <label className="text-sm font-medium leading-none">Allmän aktivitetsnivå</label>
-                <select className="w-full p-2 border rounded-md mt-1" value={formData.activityLevel} onChange={e => setFormData({...formData, activityLevel: e.target.value})}>
+                <select aria-label="Allmän aktivitetsnivå" className="w-full p-2 border rounded-md mt-1" value={formData.activityLevel} onChange={e => setFormData({...formData, activityLevel: e.target.value})}>
                   <option value="sedentary">Låg (Mestadels stillasittande)</option>
                   <option value="light">Lätt (Lätt rörelse under dagen)</option>
                   <option value="moderate">Måttlig (Regelbunden träning/rörelse)</option>
@@ -208,11 +208,11 @@ export default function OnboardingPage() {
               <label className="block text-sm">Arbetstider<select className="w-full border rounded p-2" value={formData.preferences.workSchedule} onChange={e => setFormData({...formData, preferences: {...formData.preferences, workSchedule: e.target.value}})}><option value="dagtid">Dagtid</option><option value="skift">Skift / oregelbundet</option><option value="natt">Natt</option></select></label>
               <label className="block text-sm">Matbudget<select className="w-full border rounded p-2" value={formData.preferences.budget} onChange={e => setFormData({...formData, preferences: {...formData.preferences, budget: e.target.value}})}><option value="normal">Normal</option><option value="low">Låg</option></select></label>
               <label className="block text-sm">Utrustning hemma<input className="w-full border rounded p-2" value={formData.preferences.equipment} onChange={e => setFormData({...formData, preferences: {...formData.preferences, equipment: e.target.value}})} /></label>
-              <p className="text-xs text-muted-foreground">Utrustningen gäller hemmapass. Gym innebär tillgång till vanliga gymmaskiner och fria vikter. Kroppsviktspass kan använda golv och vägg.</p>
+              <p className="text-xs text-muted-foreground">Skriv utrustning du har, separerad med komma, till exempel kroppsvikt, hantlar, bänk. Valet gäller hemmapass. Gym innebär vanliga gymmaskiner och fria vikter. Kroppsviktspass kan använda golv och vägg.</p>
               <label className="block text-sm">Övriga kroppsmått (valfritt)<input className="w-full border rounded p-2" value={formData.preferences.measurements} onChange={e => setFormData({...formData, preferences: {...formData.preferences, measurements: e.target.value}})} /></label>
               <div>
                 <label className="text-sm font-medium leading-none">Var vill du träna?</label>
-                <select className="w-full p-2 border rounded-md mt-1" value={formData.trainingLocation} onChange={e => setFormData({...formData, trainingLocation: e.target.value})}>
+                <select aria-label="Var vill du träna?" className="w-full p-2 border rounded-md mt-1" value={formData.trainingLocation} onChange={e => setFormData({...formData, trainingLocation: e.target.value})}>
                   <option value="both">Både hemma och gym</option>
                   <option value="home">Hemma</option>
                   <option value="gym">Gym</option>
@@ -221,7 +221,7 @@ export default function OnboardingPage() {
 
               <div>
                 <label className="text-sm font-medium leading-none">Träningsnivå</label>
-                <select className="w-full p-2 border rounded-md mt-1" value={formData.trainingLevel} onChange={e => setFormData({...formData, trainingLevel: e.target.value})}>
+                <select aria-label="Träningsnivå" className="w-full p-2 border rounded-md mt-1" value={formData.trainingLevel} onChange={e => setFormData({...formData, trainingLevel: e.target.value})}>
                   <option value="beginner">Nybörjare</option>
                   <option value="intermediate">Medelnivå</option>
                   <option value="advanced">Avancerad</option>
@@ -237,7 +237,7 @@ export default function OnboardingPage() {
 
           {step === 4 && (
             <div className="space-y-4">
-              <h3 className="text-lg font-medium">App-upplevelse</h3>
+              <h3 className="text-lg font-medium">Visningsläge</h3>
               <p className="text-sm text-muted-foreground">Hur mycket detaljer vill du se i appen?</p>
               
               <div className="space-y-3">
@@ -251,8 +251,8 @@ export default function OnboardingPage() {
                 <label className="flex items-start gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
                   <input type="radio" name="mode" className="mt-1" checked={formData.mode === "advanced"} onChange={() => setFormData({...formData, mode: "advanced"})} />
                   <div>
-                    <div className="font-medium">Jag vill se all statistik</div>
-                    <div className="text-sm text-muted-foreground">Visa kalorier, makros, trender och all data.</div>
+                    <div className="font-medium">Jag vill se fler detaljer</div>
+                    <div className="text-sm text-muted-foreground">Visa receptens näringsvärden, mätgrafer och loggade värden. Planen är densamma; du kan byta läge på alla appsidor.</div>
                   </div>
                 </label>
               </div>

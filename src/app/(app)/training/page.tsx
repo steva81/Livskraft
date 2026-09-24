@@ -96,7 +96,7 @@ export default function TrainingPage() {
 
       {activeTab === "plan" && (
         <div className="space-y-4">
-          <div className="bg-primary/10 p-4 rounded-lg flex items-center justify-between border border-primary/20 gap-4">
+          <div className="bg-primary/10 p-4 rounded-lg flex flex-wrap items-center justify-between border border-primary/20 gap-4">
             <div>
               <h3 className="font-semibold text-primary">Ont om tid idag?</h3>
               <p className="text-sm text-gray-600">
@@ -109,10 +109,10 @@ export default function TrainingPage() {
               className="bg-white shrink-0"
               onClick={() => {
                 setShowShort((v) => !v)
-                setPlaceFilter("home")
+                setPlaceFilter(showShort ? "all" : "home")
               }}
             >
-              {showShort ? "Visa alla pass" : "10-min alternativ"}
+              {showShort ? "Visa alla pass" : "Hemma, högst 15 min"}
             </Button>
           </div>
 
@@ -122,7 +122,7 @@ export default function TrainingPage() {
                 key={key}
                 size="sm"
                 variant={placeFilter === key ? "default" : "outline"}
-                onClick={() => setPlaceFilter(key)}
+                onClick={() => { setPlaceFilter(key); setShowShort(false) }}
               >
                 {key === "all" ? "Alla" : key === "home" ? "Hemma" : "Gym"}
               </Button>
@@ -167,7 +167,7 @@ export default function TrainingPage() {
                     <CardContent>
                       <div className="space-y-2 mb-4">
                         {exercises.map((ex, idx) => (
-                          <div key={idx} className="flex justify-between text-sm">
+                          <div key={idx} className="flex flex-wrap justify-between gap-x-3 text-sm">
                             <span>{ex.name}</span>
                             {mode === "advanced" ? (
                               <span className="text-muted-foreground">

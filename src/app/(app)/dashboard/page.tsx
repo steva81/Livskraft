@@ -3,7 +3,7 @@ import { displayValue } from "@/lib/display"
 import { useEffect, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { CheckCircle2, Circle, Utensils, Dumbbell, Footprints, Info } from "lucide-react"
+import { CheckCircle2, Circle, Utensils, Dumbbell, Footprints } from "lucide-react"
 import { useMode } from "@/lib/ModeContext"
 import { getUser, getTodayData, setDailySteps, completeMeal, getTodayPlanContext } from "@/app/actions"
 import type { PublicUser } from "@/app/actions"
@@ -12,7 +12,7 @@ import type { PlannedMeal } from "@/lib/plan-types"
 import Link from "next/link"
 
 export default function DashboardPage() {
-  const { mode, setMode, userId, sessionStatus } = useMode()
+  const { userId, sessionStatus } = useMode()
   const [user, setUser] = useState<PublicUser | null>(null)
   const [todayLog, setTodayLog] = useState<DailyLog | null>(null)
   const [meals, setMeals] = useState<PlannedMeal[]>([])
@@ -38,7 +38,7 @@ export default function DashboardPage() {
       setStepInput(String(log?.steps ?? 0))
       setLoading(false)
     })
-  }, [userId, sessionStatus, setMode])
+  }, [userId, sessionStatus])
 
   const handleAddSteps = async () => {
     setSaving(true)
@@ -71,13 +71,6 @@ export default function DashboardPage() {
           <h1 className="text-3xl font-bold tracking-tight">Idag</h1>
           <p className="text-muted-foreground">Välkommen tillbaka, {user.name.split(" ")[0]}!</p>
         </div>
-        <button
-          onClick={() => setMode(mode === "simple" ? "advanced" : "simple")}
-          className="bg-primary/10 text-primary px-3 py-1 rounded-full text-sm font-medium flex items-center gap-1 hover:bg-primary/20 transition"
-        >
-          <Info className="w-4 h-4" />
-          {mode === "simple" ? "Enkelt läge" : "Avancerat läge"}
-        </button>
       </div>
 
       <div className="rounded-xl bg-primary/5 p-4 space-y-2"><p>Nästa steg: {meals.find(m => !eaten.includes(`${m.slot}:${m.recipeId}`) && !eaten.includes(m.title))?.title ?? "Fortsätt med rörelse eller återhämtning i din takt."}</p><p className="text-sm">Dagen behöver inte bli perfekt. Fortsätt med nästa vanliga måltid eller pass.</p><Link className="text-primary underline text-sm" href="/meals">Kontrollera veckans ingredienser och inköpslista</Link></div>
@@ -86,7 +79,7 @@ export default function DashboardPage() {
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2">
               <Utensils className="h-5 w-5 text-primary" />
-              Matplan
+              Dagens måltider
             </CardTitle>
             <CardDescription>Dina måltider för idag, filtrerade efter dina kostregler</CardDescription>
           </CardHeader>

@@ -343,6 +343,7 @@ export async function getProgressSummary() {
   const currentAverage = average(logs.filter(l => l.date >= weekStart && l.weight != null).map(l => l.weight!))
   const previousAverage = average(logs.filter(l => l.date < weekStart && l.weight != null).map(l => l.weight!))
   const latestWeight = weights.at(-1) ?? user.currentWeight
+  const latestMeasurement = await prisma.dailyLog.findFirst({where:{userId, measurements:{not:null}},orderBy:{date:"desc"},select:{measurements:true,date:true}})
   const firstWeight = weights[0] ?? user.currentWeight
   const avgSteps =
     logs.length > 0 ? Math.round(logs.reduce((sum, l) => sum + l.steps, 0) / logs.length) : 0
@@ -356,6 +357,7 @@ export async function getProgressSummary() {
     currentAverage, previousAverage, weeklyAverageSteps,
     stepGoalDays: recentLogs.filter(l => l.steps >= user.stepGoal).length,
     latestWeight,
+    latestMeasurement,
     firstWeight,
     avgSteps,
     workoutsThisWeek: workoutLogs.length,
@@ -403,7 +405,7 @@ export async function saveMeasurements(input: { weight?: number; waist?: number;
 
 export async function saveMode(mode: "simple" | "advanced") {
   const userId = await getAuthenticatedUserId()
-  if (!userId || !["simple", "advanced"].includes(mode)) return
+  if (!userId || !["simple", "advanced"].includes(mode)) throw new Error("Kunde inte spara visningsläget")
   await prisma.user.update({ where: { id: userId }, data: { mode } })
 }
 
@@ -448,5 +450,6 @@ export async function getCoachOverview() {
   const context = await getCoachContext()
   if (!context) return null
   return { name:context.userName, nextMeal:context.plannedMeals.find(m=>!m.completed)?.title??null,
+    hasMealPlan:context.plannedMeals.length>0, restrictions:context.restrictions, dislikedFoods:context.dislikedFoods,
     workout:context.todayWorkout, steps:context.stepsToday, stepGoal:context.stepGoal }
 }

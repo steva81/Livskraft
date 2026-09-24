@@ -52,7 +52,9 @@ export default function ProgressPage() {
   const canChartWeight = weightLogs.length>=4 && first!=null && average!=null
   const minWeight = Math.min(...weightLogs.map(l=>l.weight!))-0.5
   const maxWeight = Math.max(...weightLogs.map(l=>l.weight!))+0.5
-  const weightPoints = weightLogs.map((l,i)=>({x:20+i*260/Math.max(1,weightLogs.length-1),y:110-(l.weight!-minWeight)/(maxWeight-minWeight)*90,log:l}))
+  const firstDate = weightLogs.length ? new Date(weightLogs[0].date).getTime() : 0
+  const lastDate = weightLogs.length ? new Date(weightLogs[weightLogs.length-1].date).getTime() : 0
+  const weightPoints = weightLogs.map(l=>({x:20+(new Date(l.date).getTime()-firstDate)*260/Math.max(1,lastDate-firstDate),y:110-(l.weight!-minWeight)/(maxWeight-minWeight)*90,log:l}))
   const choose = async (accept: boolean) => {
     if (!adaptive) return
     setSaving(true)
@@ -87,6 +89,7 @@ export default function ProgressPage() {
         <CardContent className="space-y-4">
           <p>{adherenceMessage(summary?.workoutsThisWeek ?? 0,summary?.plannedWorkouts ?? 0)}</p>
           {adaptive && <>
+            <p className="text-sm font-medium">Gäller veckan som börjar {new Date(adaptive.targetStart).toLocaleDateString("sv-SE", {day:"numeric",month:"long"})}.</p>
             <p className="text-sm">{adaptive.reason}</p>
             {adaptive.changes.length>0 && <div><p className="font-medium">{adaptive.status==="accepted" ? "Sparade ändringar för nästa vecka" : adaptive.status==="declined" ? "Förslaget du avböjde" : "Förslag för nästa vecka"}</p><ul className="list-disc pl-5 text-sm space-y-1">{adaptive.changes.map(c=><li key={c.dayId+c.description}>{c.description}</li>)}</ul><p className="text-sm mt-2">{adaptive.unchanged}</p></div>}
             {adaptive.status==="proposed" && <div className="flex gap-3 flex-wrap"><Button disabled={saving} onClick={()=>choose(true)}>Ja, anpassa nästa vecka</Button><Button disabled={saving} variant="outline" onClick={()=>choose(false)}>Nej, behåll planen</Button></div>}
@@ -124,7 +127,7 @@ export default function ProgressPage() {
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2">
-              <LineChart className="w-5 h-5 text-primary" /> Mått &amp; träning
+              <LineChart className="w-5 h-5 text-primary" /> Kroppsmått
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -135,16 +138,14 @@ export default function ProgressPage() {
                 {summary?.waist != null ? `${summary.waist} cm (senast sparat)` : "Ingen mätning sparad"}
               </span>
             </div>
-            <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-              <span className="text-sm font-medium">Träningspass denna vecka</span>
-              <span className="text-sm text-muted-foreground">{completedWorkoutsText(summary?.workoutsThisWeek ?? 0)}</span>
-            </div>
+            {summary?.latestMeasurement?.measurements && <p className="text-sm break-words">Övriga mått ({new Date(summary.latestMeasurement.date).toLocaleDateString("sv-SE")}): {summary.latestMeasurement.measurements}</p>}
             {mode === "advanced" && <ul className="text-xs space-y-1">{summary?.logs.filter(l=>l.waist!=null||l.measurements).map(l=><li key={String(l.date)}>{new Date(l.date).toLocaleDateString("sv-SE")}: {l.waist!=null ? "midja "+l.waist+" cm" : ""} {l.measurements}</li>)}</ul>}
           </CardContent>
         </Card>
-        <Card className="md:col-span-2"><CardHeader><CardTitle>Steg &amp; vardagsrörelse</CardTitle><CardDescription>Senaste sju dagarna: {summary?.weeklyAverageSteps ?? "–"} steg i snitt per loggad dag. Personligt mål: {summary?.stepGoal?.toLocaleString("sv-SE")} steg.</CardDescription></CardHeader><CardContent>
+        <Card className="md:col-span-2"><CardHeader><CardTitle>Träning denna vecka</CardTitle></CardHeader><CardContent><p>{completedWorkoutsText(summary?.workoutsThisWeek ?? 0)} av {summary?.plannedWorkouts ?? 0} planerade.</p><a className="text-sm text-primary underline" href="/training">Se pass och träningslogg</a></CardContent></Card>
+        <Card className="md:col-span-2"><CardHeader><CardTitle>Steg &amp; vardagsrörelse</CardTitle><CardDescription>Senaste sju dagarna: {summary?.weeklyAverageSteps?.toLocaleString("sv-SE") ?? "–"} steg i snitt per loggad dag. Personligt mål: {summary?.stepGoal?.toLocaleString("sv-SE")} steg.</CardDescription></CardHeader><CardContent>
           <p className="text-sm mb-3">Stegmålet nåddes {summary?.stepGoalDays ?? 0} {(summary?.stepGoalDays ?? 0)===1 ? "dag" : "dagar"}. Ologgade dagar räknas inte som noll.</p>
-          {mode === "advanced" && stepLogs.length>0 && <><div className="h-28 flex items-end gap-2" role="img" aria-label="Steg per loggad dag">{stepLogs.map(l=><div key={String(l.date)} className="flex-1 bg-primary rounded-t" style={{height:(l.steps/maxSteps*100)+"%"}} title={new Date(l.date).toLocaleDateString("sv-SE")+": "+l.steps+" steg"} />)}</div><ul className="text-xs mt-3 space-y-1">{stepLogs.map(l=><li key={String(l.date)}>{new Date(l.date).toLocaleDateString("sv-SE")}: {l.steps.toLocaleString("sv-SE")} steg</li>)}</ul></>}
+          {mode === "advanced" && stepLogs.length>0 && <><p className="text-xs text-muted-foreground mb-2">Loggade dagar under de senaste två veckorna</p><div className="h-28 flex items-end gap-2" role="img" aria-label="Steg per loggad dag">{stepLogs.map(l=><div key={String(l.date)} className="flex-1 bg-primary rounded-t" style={{height:(l.steps/maxSteps*100)+"%"}} title={new Date(l.date).toLocaleDateString("sv-SE")+": "+l.steps+" steg"} />)}</div><ul className="text-xs mt-3 space-y-1">{stepLogs.map(l=><li key={String(l.date)}>{new Date(l.date).toLocaleDateString("sv-SE")}: {l.steps.toLocaleString("sv-SE")} steg</li>)}</ul></>}
           {stepLogs.length===0 && <p className="text-sm text-muted-foreground">Spara dagens steg på Idag-sidan för att börja.</p>}
         </CardContent></Card>
       </div>

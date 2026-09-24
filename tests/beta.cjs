@@ -82,6 +82,7 @@ async function main() {
     assert.equal((await actions.getWorkoutLogs()).length, 1)
     assert.equal((await actions.getTodayData()).steps, 2445)
     assert.equal((await actions.getProgressSummary()).latestWeight,79.5)
+    assert.equal((await actions.getProgressSummary()).latestMeasurement.measurements,'höft 98 cm')
     assert.equal((await actions.getUser()).mode,'advanced')
     const meal = (await actions.getTodayPlanContext()).meals[0]
     await actions.completeMeal(meal.slot,meal.recipeId)
@@ -173,6 +174,10 @@ async function main() {
   await check('coach unavailable ingredient, time intent, remaining meal and restaurant', async () => {
     identity=ids[0]
     const context=await actions.getCoachContext()
+    const overview=await actions.getCoachOverview()
+    assert.equal(overview.hasMealPlan,true)
+    assert.deepEqual(overview.restrictions,context.restrictions)
+    assert.deepEqual(overview.dislikedFoods,context.dislikedFoods)
     const missing=await getCoachReply('Jag har ingen kyckling hemma.',context)
     assert(!missing.includes('Kycklingwok'))
     assert(missing.includes('Recept'))

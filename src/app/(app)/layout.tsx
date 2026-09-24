@@ -3,6 +3,7 @@ import { Home, CalendarDays, Dumbbell, LineChart, MessageCircle, User, ListCheck
 import { ModeProvider } from "@/lib/ModeContext"
 import { getAuthenticatedUserId } from "@/lib/auth"
 import { redirect } from "next/navigation"
+import { ModeControl } from "@/components/ModeControl"
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   if (!await getAuthenticatedUserId()) redirect("/login")
@@ -45,14 +46,14 @@ export default async function AppLayout({ children }: { children: React.ReactNod
               </li>
               <li>
                 <Link href="/coach" className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium hover:bg-gray-100">
-                  <MessageCircle className="h-4 w-4" /> AI Coach
+                  <MessageCircle className="h-4 w-4" /> Coach
                 </Link>
               </li>
             </ul>
           </nav>
           <div className="border-t p-4">
             <Link href="/profile" className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium hover:bg-gray-100">
-              <User className="h-4 w-4" /> Min Profil
+              <User className="h-4 w-4" /> Min profil
             </Link>
           </div>
         </aside>
@@ -69,7 +70,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             <Link href="/profile" className="text-sm">Profil</Link>
           </header>
 
-          <div className="flex-1 overflow-y-auto p-4 md:p-8">{children}</div>
+          <div className="flex-1 overflow-y-auto p-4 md:p-8"><ModeControl />{children}</div>
 
           {/* Mobile Nav */}
           <nav className="md:hidden border-t bg-white flex items-center justify-around h-16">
