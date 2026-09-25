@@ -88,8 +88,8 @@ function UserMealsPage() {
         </p>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-3">
-        <div className="md:col-span-2 space-y-4">
+      <div className="grid gap-6 xl:grid-cols-3">
+        <div className="xl:col-span-2 space-y-4">
           <h2 className="text-xl font-semibold">Dina Receptförslag</h2>
           {recipes.length === 0 ? (
             <Card>
@@ -186,9 +186,11 @@ function UserMealsPage() {
               ) : (
                 <ul className="space-y-2">
                   {shoppingList.map((item) => (
-                    <li key={item} className="flex items-start gap-2 text-sm">
-                      <input type="checkbox" aria-label={item} checked={checked.includes(item)} disabled={saving || !planId} onChange={event => toggleItem(item, event.target.checked)} className="mt-1 shrink-0" />
-                      <span>{item}</span>
+                    <li key={item} className="text-sm">
+                      <label className="flex min-h-11 cursor-pointer items-start gap-3 py-2">
+                        <input type="checkbox" aria-label={item} checked={checked.includes(item)} disabled={saving || !planId} onChange={event => toggleItem(item, event.target.checked)} className="mt-0.5 h-5 w-5 shrink-0" />
+                        <span className="min-w-0 break-words">{item}</span>
+                      </label>
                     </li>
                   ))}
                 </ul>

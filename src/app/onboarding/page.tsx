@@ -152,7 +152,7 @@ export default function OnboardingPage() {
               
               <div className="space-y-2">
                 {["vegetarian", "vegan", "lactose-free", "gluten-free", "halal", "kosher"].map(res => (
-                  <label key={res} className="flex items-center gap-2">
+                  <label key={res} className="flex min-h-11 sm:min-h-0 cursor-pointer items-center gap-2">
                     <input type="checkbox" checked={formData.dietRestrictions.includes(res)} onChange={() => handleCheckbox("dietRestrictions", res)} />
                     <span>{res === "lactose-free" ? "Laktosfri" : res === "gluten-free" ? "Glutenfri" : res === "vegetarian" ? "Vegetarisk" : res === "vegan" ? "Vegansk" : res === "halal" ? "Halal" : "Kosher"}</span>
                   </label>
@@ -185,7 +185,7 @@ export default function OnboardingPage() {
                   { id: "no-fridge", label: "Saknar kylskåp" },
                   { id: "meal-prep", label: "Kan förbereda matlådor" }
                 ].map(ls => (
-                  <label key={ls.id} className="flex items-center gap-2">
+                  <label key={ls.id} className="flex min-h-11 sm:min-h-0 cursor-pointer items-center gap-2">
                     <input type="checkbox" checked={formData.lifestyle.includes(ls.id)} onChange={() => handleCheckbox("lifestyle", ls.id)} />
                     <span>{ls.label}</span>
                   </label>

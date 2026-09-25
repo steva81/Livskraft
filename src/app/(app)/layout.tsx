@@ -11,7 +11,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     <ModeProvider>
       <div className="flex h-screen bg-gray-50/50">
         {/* Desktop Sidebar */}
-        <aside className="hidden md:flex w-64 flex-col border-r bg-white">
+        <aside className="hidden lg:flex w-64 shrink-0 flex-col border-r bg-white">
           <div className="h-16 flex items-center px-6 border-b">
             <Link href="/dashboard" className="flex items-center gap-2 font-bold text-xl text-primary">
               Livskraft
@@ -61,19 +61,19 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         {/* Main content */}
         <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
           {/* Mobile Header */}
-          <header className="md:hidden h-14 border-b bg-white flex items-center justify-between px-4">
+          <header className="lg:hidden h-14 shrink-0 border-b bg-white flex items-center justify-between px-4">
             <Link href="/dashboard" className="font-bold text-lg text-primary">
               Livskraft
             </Link>
-            <Link href="/meals" className="text-sm">Recept</Link>
-            <Link href="/progress" className="text-sm">Framsteg</Link>
-            <Link href="/profile" className="text-sm">Profil</Link>
+            <Link href="/meals" className="inline-flex min-h-11 min-w-11 items-center justify-center text-sm">Recept</Link>
+            <Link href="/progress" className="inline-flex min-h-11 min-w-11 items-center justify-center text-sm">Framsteg</Link>
+            <Link href="/profile" className="inline-flex min-h-11 min-w-11 items-center justify-center text-sm">Profil</Link>
           </header>
 
           <div className="flex-1 overflow-y-auto p-4 md:p-8"><ModeControl />{children}</div>
 
           {/* Mobile Nav */}
-          <nav className="md:hidden border-t bg-white flex items-center justify-around h-16">
+          <nav className="lg:hidden shrink-0 border-t bg-white flex items-center justify-around h-16">
             <Link href="/dashboard" className="flex flex-col items-center p-2 text-xs text-gray-500 hover:text-primary">
               <Home className="h-5 w-5 mb-1" /> Idag
             </Link>
