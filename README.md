@@ -34,7 +34,7 @@ Detta är ett begränsat ingrediensbaserat filter för ett litet demobibliotek, 
 
 ## Coach
 
-Standardläget är deterministiska svenska svar med profil, plan, träning och steg som kontext. Coach ger praktiska alternativ utan kompensationsfasta, straffträning, diagnoser eller läkemedelsdosering. Konversationen sparas inte.
+Standardläget är deterministiska svenska svar med profil, plan, träning och steg som kontext. Coach ger praktiska alternativ utan kompensationsfasta, straffträning, diagnoser eller läkemedelsdosering. De senaste 50 fråge–svar-paren sparas per konto i SQLite, som atomiska par. Historiken kan raderas i Coach och används inte som underlag för nya svar. Inga extra profilkopior, sessionsuppgifter eller leverantörsnycklar lagras i historiken; användarens egen frågetext kan innehålla känsliga uppgifter.
 
 En framtida serveradapter är förberedd. Med `AI_COACH_LIVE_ENABLED=true`, `AI_API_KEY`, `AI_API_URL` och eventuellt `AI_API_MODEL` kan en OpenAI-kompatibel endpoint klassificera frågans ämne när den lokala avsiktstolkningen inte räcker. Endast ett tillåtet ämnesord accepteras; svaret byggs fortfarande av kontrollerade mallar och filtrerade recept. Fritt LLM-genererat kostråd skickas inte till användaren. Anrop har timeout och reservsvar. Extern adapter är inte funktionstestad. Koden skickar systeminstruktion och frågetext, inte profilobjektet. Frågetext kan innehålla känsliga uppgifter; verklig användning kräver leverantörsgranskning, samtycke och integritetsflöde. Lokal coach fungerar utan extern tjänst.
 
@@ -42,7 +42,7 @@ En framtida serveradapter är förberedd. Med `AI_COACH_LIVE_ENABLED=true`, `AI_
 
 - Planen är regelstyrd med receptrotation, inte optimerad näringsberäkning. Måltidsfördelning är tre huvudmål som justerbar utgångspunkt i rådgivningen; dynamiska måltidsslots och individuella portionsstorlekar saknas.
 - Hemutrustning matchas mot kända utrustningsord per övning; nekade utrustningsposter räknas inte som tillgång och ett valfritt bänkalternativ gäller bara den aktuella övningen. Gym betyder standardutrustat gym. Detta är inte en fullständig utrustningsmodell: strukturerade krav, alternativ, viktspann och maskinvarianter krävs innan biblioteket byggs ut. Fria kroppsmått visas som anteckningar, inte som jämförbara mätserier. Budgetprioritering använder enkla ingrediensord, inte priser.
-- Receptalternativ kan läsas, men ett specifikt receptbyte i en sparad plan saknar ännu UI. Inköpslistans bockar sparas inte.
+- Receptalternativ kan läsas, men ett specifikt receptbyte i en sparad plan saknar ännu UI. Inköpslistans bockar sparas i SQLite per veckoplan och exakt summerad rad, med ägarskap via veckoplanens användare. Ändrad mängd ger en annan rad. Om den ursprungliga raden återkommer i samma plan återkommer dess markering. Ny veckoplan börjar utan markeringar. Flera öppna flikar uppdateras vid omladdning, inte i realtid.
 - Adaptiv vecka är regelstyrd och användarvald, inte en tränad modell. Ett sparat beslut gäller målveckan; UI för att ångra beslutet saknas. Ingen automatisk kalorijustering.
 - Ingen OAuth, e-postverifiering, lösenordsåterställning, produktionsklassad distribuerad inloggningsbegränsning eller wearables.
 - Datum använder serverns lokala tidszon; kör lokal beta i Europe/Stockholm. Explicit användartidszon behövs före AWS.
@@ -55,9 +55,14 @@ En framtida serveradapter är förberedd. Med `AI_COACH_LIVE_ENABLED=true`, `AI_
 - `npm run build` – inga ignoreBuildErrors/ignoreDuringBuilds
 - `npm run test:beta` – riktiga databasoperationer med kontrollerad sessionsidentitet; 14 testgrupper
 - `npm run test:product` – fyra grupper för mängder/enheter, utrustning, varierade veckoråd och alla seed-recepts instruktioner; inga databasändringar
+- `node tests/refinements.cjs` – riktade DB/API-tester för inköpslistor, Coach-historik, användar-/veckoisolering, gallring/radering, utrustning och receptmetadata; kontrollerad sessionsidentitet och separata testkonton
 - `npm run test:http` – kör mot `npm start` på port 3000; riktiga NextAuth-sessioner, skyddade sidor och Coach-API för två separata testkonton
 
 Testerna skapar egna konton med `example.invalid` och städar enbart dessa konton i finally. De återställer inte databas eller seed. Kör dem bara mot lokal beta. HTTP-testet ska köras med extern coach avstängd.
+
+## Uppdatering från produktcheckpoint 64e21b8
+
+Synkronisera de två nya tabellerna med `npx prisma db push --skip-generate` och generera klienten med `npx prisma generate`. Kör `node scripts/refine-recipe-data.cjs` för en avgränsad, upprepningsbar rättning av befintliga recept, utan att köra hela seed: nudlarnas ”port” skrivs ut som ”portion” och linsoppans glutenfri-tagg tas bort eftersom dess generiska buljong inte styrker märkningen. Seed tillämpar samma rättningar framöver. Inga näringsvärden eller gramomräkningar ändras. Dessa uppdateringar har tillämpats på den lokala databasen under produktförfiningen; appen har inte startats om eller byggts om.
 
 ## Integritet och framtida AWS/PostgreSQL
 

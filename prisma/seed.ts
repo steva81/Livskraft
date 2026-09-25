@@ -1,6 +1,7 @@
 import { PrismaClient } from "@prisma/client"
 import { hashPassword } from "../src/lib/password"
 import { recipeInstructions } from "./recipe-instructions"
+import { refineRecipeData } from "./recipe-refinements"
 
 const prisma = new PrismaClient()
 
@@ -61,7 +62,7 @@ async function main() {
         title: "Snabb Kycklingwok med Nudlar",
         description: "Enkel och god wok som passar perfekt efter jobbet.",
         prepTime: 20,
-        ingredients: JSON.stringify(["200g kycklingbröst", "1 port äggnudlar", "100g broccoli", "2 msk glutenfri soja", "1 vitlöksklyfta"]),
+        ingredients: JSON.stringify(["200g kycklingbröst", "1 portion äggnudlar", "100g broccoli", "2 msk glutenfri soja", "1 vitlöksklyfta"]),
         instructions: JSON.stringify(["Strimla kycklingen och stek.", "Koka nudlarna.", "Dela broccolin.", "Blanda ner nudlar och soja."]),
         nutrition: JSON.stringify({ calories: 450, protein: 45, carbs: 40, fat: 12 }),
         tags: JSON.stringify(["dinner", "quick", "lactose-free"]),
@@ -77,12 +78,12 @@ async function main() {
       },
       {
         title: "Röd lins-soppa",
-        description: "Värmande lunch utan nötter och mejeri.",
+        description: "Värmande linssoppa med morot och gurkmeja. Kontrollera buljongens allergenmärkning.",
         prepTime: 25,
         ingredients: JSON.stringify(["2 dl röda linser", "1 lök", "2 morötter", "1 liter färdigblandad grönsaksbuljong", "1 tsk gurkmeja"]),
         instructions: JSON.stringify(["Fräs lök och morot.", "Tillsätt linser och buljong.", "Koka 15 min.", "Mixa lätt."]),
         nutrition: JSON.stringify({ calories: 280, protein: 16, carbs: 40, fat: 4 }),
-        tags: JSON.stringify(["lunch", "vegetarian", "vegan", "lactose-free", "gluten-free"]),
+        tags: JSON.stringify(["lunch", "vegetarian", "vegan", "lactose-free"]),
       },
       {
         title: "Spenatomelett med tomat",
@@ -136,7 +137,7 @@ async function main() {
     if (!existing) await prisma.recipe.create({ data: { ...recipe, instructions } })
     else await prisma.recipe.update({ where: { id:existing.id }, data: {
       instructions,
-      ingredients: existing.ingredients.replaceAll("1 liter grönsaksbuljong","1 liter färdigblandad grönsaksbuljong"),
+      ...refineRecipeData({ ...existing, ingredients: existing.ingredients.replaceAll("1 liter grönsaksbuljong","1 liter färdigblandad grönsaksbuljong") }),
     } })
   }
 

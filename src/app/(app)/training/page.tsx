@@ -34,6 +34,7 @@ export default function TrainingPage() {
       setLogs(l)
       setPreferredLevel(u?.trainingLevel ?? "beginner")
       setPreferences(readPreferences(u?.preferences??null))
+      setPreferredPlace(u?.trainingLocation ?? "both")
       if (u?.trainingLocation === "home" || u?.trainingLocation === "gym") {
         setPlaceFilter(u.trainingLocation)
         setPreferredPlace(u.trainingLocation)

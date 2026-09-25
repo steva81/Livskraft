@@ -9,7 +9,7 @@ import { displayValue } from "@/lib/display"
 import { useMode } from "@/lib/ModeContext"
 
 interface Message {
-  id: number
+  id: string | number
   role: "user" | "coach"
   text: string
 }
@@ -23,6 +23,13 @@ const QUICK_PROMPTS = [
 ]
 
 export default function CoachPage() {
+  const { userId, sessionStatus } = useMode()
+  if (sessionStatus === "loading") return <p>Laddar samtalet…</p>
+  if (!userId) return <p>Logga in för att prata med coachen.</p>
+  return <UserCoachPage key={userId} />
+}
+
+function UserCoachPage() {
   const { mode } = useMode()
   const conversation = useRef<HTMLDivElement>(null)
   const [messages, setMessages] = useState<Message[]>([
@@ -34,6 +41,17 @@ export default function CoachPage() {
   ])
   const [overview, setOverview] = useState<Awaited<ReturnType<typeof getCoachOverview>>>(null)
   const [overviewError, setOverviewError] = useState(false)
+  const [historyReady, setHistoryReady] = useState(false)
+  const [historyError, setHistoryError] = useState("")
+  useEffect(() => {
+    let active = true
+    fetch("/api/coach", { cache: "no-store" }).then(async res => {
+      if (!res.ok) throw new Error("History unavailable")
+      const data = await res.json() as { messages: Message[] }
+      if (active) { setMessages(previous => [previous[0], ...data.messages]); setHistoryReady(true) }
+    }).catch(() => { if (active) setHistoryError("Kunde inte läsa historiken. Ladda om sidan för att försöka igen.") })
+    return () => { active = false }
+  }, [])
   useEffect(() => { getCoachOverview().then(setOverview).catch(() => setOverviewError(true)) }, [])
   const [input, setInput] = useState("")
   const [loading, setLoading] = useState(false)
@@ -42,7 +60,8 @@ export default function CoachPage() {
   }, [messages, loading])
 
   const sendMessage = async (text: string) => {
-    if (!text.trim() || loading) return
+    if (!text.trim() || loading || !historyReady) return
+    setHistoryError("")
 
     const userMsg: Message = { id: Date.now(), role: "user", text }
     setMessages((prev) => [...prev, userMsg])
@@ -55,7 +74,8 @@ export default function CoachPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message: text }),
       })
-      const data = (await res.json()) as { reply?: string; error?: string }
+      const data = (await res.json()) as { reply?: string; error?: string; saved?: boolean }
+      if (!res.ok || data.saved === false) setHistoryError("Det senaste meddelandet kunde inte sparas i historiken.")
       const replyText =
         res.status === 401
           ? "Du behöver vara inloggad för att prata med coachen."
@@ -65,6 +85,7 @@ export default function CoachPage() {
         { id: Date.now() + 1, role: "coach", text: replyText },
       ])
     } catch {
+      setHistoryError("Det gick inte att bekräfta att meddelandet sparades. Ladda om sidan för att kontrollera historiken.")
       setMessages((prev) => [
         ...prev,
         { id: Date.now() + 1, role: "coach", text: "Något gick fel. Försök igen!" },
@@ -72,6 +93,19 @@ export default function CoachPage() {
     } finally {
       setLoading(false)
     }
+  }
+
+  const clearHistory = async () => {
+    if (loading || !window.confirm("Vill du radera din sparade Coach-historik?")) return
+    setLoading(true)
+    try {
+      const res = await fetch("/api/coach", { method: "DELETE" })
+      if (!res.ok) throw new Error("Delete failed")
+      setMessages(previous => previous.slice(0, 1))
+      setHistoryError("")
+      setHistoryReady(true)
+    } catch { setHistoryError("Kunde inte radera historiken. Försök igen.") }
+    finally { setLoading(false) }
   }
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -87,6 +121,7 @@ export default function CoachPage() {
       </div>
 
       {overviewError && <p role="status" className="text-sm">Kunde inte läsa dagens översikt. Ladda om sidan för att försöka igen.</p>}
+      {historyError && <p role="alert" className="text-sm text-red-700">{historyError}</p>}
       {overview && <Card><CardContent className="p-4 space-y-2 text-sm">
         <p className="font-semibold">Hej {overview.name}, vad behöver du idag?</p>
         <div className="grid gap-2 sm:grid-cols-3">
@@ -137,9 +172,9 @@ export default function CoachPage() {
               onChange={(e) => setInput(e.target.value)}
               placeholder="Skriv din fråga…"
               className="min-w-0 flex-1 bg-white border border-input rounded-md h-10 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-              disabled={loading}
+              disabled={loading || !historyReady}
             />
-            <Button type="submit" size="icon" aria-label="Skicka fråga" disabled={loading || !input.trim()}>
+            <Button type="submit" size="icon" aria-label="Skicka fråga" disabled={loading || !historyReady || !input.trim()}>
               <Send className="h-4 w-4" />
             </Button>
           </form>
@@ -147,13 +182,14 @@ export default function CoachPage() {
       </Card>
 
       {/* Quick-prompt chips */}
-      <p className="text-xs text-muted-foreground">Välj en fråga eller skriv själv. Samtalet sparas inte när du lämnar sidan. Råden utgår från din sparade plan och kostprofil.</p>
+      <p className="text-xs text-muted-foreground">De senaste 50 frågorna och svaren sparas på ditt konto. Undvik att skriva känsliga uppgifter. Råden utgår från din sparade plan och kostprofil; tidigare meddelanden används inte som underlag för nya svar.</p>
+      <Button variant="outline" onClick={clearHistory} disabled={loading || !historyReady || messages.length < 2}>Radera historik</Button>
       <div className="grid gap-2 sm:grid-cols-2">
         {QUICK_PROMPTS.map((p) => (
           <button
             key={p}
             onClick={() => sendMessage(p)}
-            disabled={loading}
+            disabled={loading || !historyReady}
             className="text-sm text-left bg-white border rounded-lg px-3 py-3 hover:bg-gray-50 transition disabled:opacity-50"
           >
             {p}

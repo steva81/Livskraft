@@ -10,17 +10,23 @@ export function levelFits(workoutLevel: string, userLevel: string): boolean {
 // Gym means standard gym access. Free-text equipment applies only at home.
 export function equipmentFits(workout: WorkoutCandidate, homeEquipment: string): boolean {
   if (workout.type === "gym") return true
+  if (workout.type !== "home") return false
   let names: string[]
   try {
     const exercises = JSON.parse(workout.exercises) as {name:string}[]
-    if (!Array.isArray(exercises) || exercises.some(ex => typeof ex.name !== "string")) return false
+    if (!Array.isArray(exercises) || !exercises.length || exercises.some(ex => !ex || typeof ex.name !== "string" || !ex.name.trim())) return false
     names = exercises.map(ex => ex.name.toLowerCase())
-  } catch { names = [workout.exercises.toLowerCase()] }
-  const available = homeEquipment.toLowerCase().replaceAll("hantlar", "hantel").split(/[,;\n]/)
+  } catch { return false }
+  const normalize = (text: string) => text.toLowerCase().replaceAll("hantlar", "hantel")
+    .replace(/pull[- ]?up(?:stång)?|chinsstång/g, "pullup").replace(/resistansband|träningsband/g, "gummiband")
+  names = names.map(normalize)
+  const parts = normalize(homeEquipment).split(/[,;\n]|\bmen\b/)
+  const available = parts
     .filter(part => !/\b(?:ingen|inga|inget|utan|saknar|inte)\b/.test(part))
+  const unavailable = parts.filter(part => /\b(?:ingen|inga|inget|utan|saknar|inte)\b/.test(part))
   const required = ["hantel", "kettlebell", "gummiband", "skivstång", "pullup", "bänk", "stol"]
   return names.every(name => required.every(item => !name.includes(item) ||
-    available.some(part => part.includes(item)) ||
+    (available.some(part => part.includes(item)) && !unavailable.some(part => part.includes(item))) ||
     (item === "bänk" && /vägg eller (?:stabil )?bänk/.test(name))))
 }
 

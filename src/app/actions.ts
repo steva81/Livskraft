@@ -379,13 +379,41 @@ export async function getTodayPlanContext() {
 }
 
 export async function getShoppingList() {
+  if (!await getAuthenticatedUserId()) return []
+  return (await getShoppingListState()).items
+}
+
+export async function getShoppingListState() {
+  const userId = await getAuthenticatedUserId()
+  if (!userId) throw new Error("Logga in först")
   const plan = await getWeeklyPlan()
   const recipes = await getRecommendedRecipes()
   const planned = plan?.planDays.flatMap(day => parsePlannedMeals(day.meals)) ?? []
-  return aggregateIngredients(planned.flatMap(meal => {
+  const items = aggregateIngredients(planned.flatMap(meal => {
     const recipe = recipes.find(r => r.id === meal.recipeId)
     return recipe ? [recipe] : []
   }))
+  const checked = plan ? await prisma.shoppingCheck.findMany({
+    where: { weeklyPlanId: plan.id, weeklyPlan: { userId } }, select: { item: true },
+  }) : []
+  return { planId: plan?.id ?? null, items, checked: checked.map(row => row.item).filter(item => items.includes(item)) }
+}
+
+export async function setShoppingItemChecked(planId: string, item: string, checked: boolean) {
+  const userId = await getAuthenticatedUserId()
+  if (!userId) throw new Error("Logga in först")
+  if (typeof planId !== "string" || typeof item !== "string" || typeof checked !== "boolean") throw new Error("Ogiltig inköpsrad")
+  const state = await getShoppingListState()
+  if (state.planId !== planId || !state.items.includes(item)) throw new Error("Inköpslistan har ändrats. Ladda om sidan.")
+  await prisma.$transaction(async tx => {
+    const plan = await tx.weeklyPlan.findFirst({ where: { id: planId, userId }, select: { id: true } })
+    if (!plan) throw new Error("Inköpslistan saknas")
+    if (checked) await tx.shoppingCheck.upsert({
+      where: { weeklyPlanId_item: { weeklyPlanId: plan.id, item } },
+      create: { weeklyPlanId: plan.id, item }, update: {},
+    })
+    else await tx.shoppingCheck.deleteMany({ where: { weeklyPlanId: plan.id, item } })
+  })
 }
 
 export async function saveMeasurements(input: { weight?: number; waist?: number; measurements?: string }) {

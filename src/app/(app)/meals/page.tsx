@@ -6,36 +6,73 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Clock, ShoppingCart } from "lucide-react"
 import { useMode } from "@/lib/ModeContext"
-import { getRecommendedRecipes, getUser, getShoppingList } from "@/app/actions"
+import { getRecommendedRecipes, getUser, getShoppingListState, setShoppingItemChecked } from "@/app/actions"
 import type { PublicUser } from "@/app/actions"
 import type { Recipe } from "@prisma/client"
 
 type NutritionData = { calories: number; protein: number; carbs: number; fat: number }
 
 export default function MealsPage() {
+  const { userId, sessionStatus } = useMode()
+  if (sessionStatus === "loading") return <p>Laddar dina recept…</p>
+  if (!userId) return <p>Logga in för att se dina recept.</p>
+  return <UserMealsPage key={userId} />
+}
+
+function UserMealsPage() {
   const { mode, userId, sessionStatus } = useMode()
   const [shoppingList, setShoppingList] = useState<string[]>([])
+  const [planId, setPlanId] = useState<string | null>(null)
+  const [checked, setChecked] = useState<string[]>([])
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState("")
+  const [loadedUserId, setLoadedUserId] = useState<string | null>(null)
   const [recipes, setRecipes] = useState<Recipe[]>([])
   const [user, setUser] = useState<PublicUser | null>(null)
   const [openId, setOpenId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    let active = true
+    setShoppingList([])
+    setChecked([])
+    setRecipes([])
+    setUser(null)
+    setPlanId(null)
+    setError("")
     if (sessionStatus === "loading") return
     if (!userId) {
       setLoading(false)
       return
     }
-    Promise.all([getUser(), getRecommendedRecipes(), getShoppingList()]).then(([u, rec, shopping]) => {
+    setLoading(true)
+    Promise.all([getUser(), getRecommendedRecipes(), getShoppingListState()]).then(([u, rec, shopping]) => {
+      if (!active) return
       setUser(u)
       setRecipes(rec)
-      setShoppingList(shopping)
+      setShoppingList(shopping.items)
+      setPlanId(shopping.planId)
+      setChecked(shopping.checked)
+      setLoadedUserId(userId)
       setLoading(false)
-    })
+    }).catch(() => { if (active) { setError("Kunde inte läsa recepten och inköpslistan. Ladda om sidan för att försöka igen."); setLoadedUserId(userId); setLoading(false) } })
+    return () => { active = false }
   }, [userId, sessionStatus])
 
-  if (sessionStatus === "loading" || loading) {
+  if (sessionStatus === "loading" || loading || (userId && loadedUserId !== userId)) {
     return <div className="p-8 text-center text-muted-foreground">Laddar dina recept...</div>
+  }
+  if (!userId) return <p>Logga in för att se dina recept.</p>
+
+  const toggleItem = async (item: string, value: boolean) => {
+    if (!planId || saving) return
+    setSaving(true)
+    setError("")
+    try {
+      await setShoppingItemChecked(planId, item, value)
+      setChecked(previous => value ? [...previous.filter(row => row !== item), item] : previous.filter(row => row !== item))
+    } catch { setError("Kunde inte spara markeringen. Försök igen eller ladda om listan.") }
+    finally { setSaving(false) }
   }
 
   const restrictions: string[] = user?.dietRestrictions ? (JSON.parse(user.dietRestrictions) as string[]) : []
@@ -86,6 +123,7 @@ export default function MealsPage() {
                     </div>
                     {mode === "advanced" && (
                       <div className="bg-gray-50 p-3 rounded-md text-xs text-gray-600 mb-4 flex flex-wrap gap-4">
+                        <span>Näringsvärden per receptportion</span>
                         <span>
                           <strong>Kcal:</strong> {nutrition.calories ?? "–"}
                         </span>
@@ -141,13 +179,15 @@ export default function MealsPage() {
             </CardHeader>
             <CardContent>
               <p className="text-xs text-muted-foreground mb-3">Buljong avser färdigblandad vätska. Väljer du tärning eller koncentrat, följ förpackningens dosering och allergenmärkning.</p>
+              <p className="text-xs text-muted-foreground mb-3">Markeringarna sparas för din veckoplan. Om mängden på en rad ändras behöver du markera den igen.</p>
+              {error && <p role="alert" className="text-sm text-red-700 mb-3">{error}</p>}
               {shoppingList.length === 0 ? (
                 <p className="text-sm text-muted-foreground">Din lista är tom.</p>
               ) : (
                 <ul className="space-y-2">
                   {shoppingList.map((item) => (
                     <li key={item} className="flex items-start gap-2 text-sm">
-                      <input type="checkbox" className="mt-1 shrink-0" />
+                      <input type="checkbox" aria-label={item} checked={checked.includes(item)} disabled={saving || !planId} onChange={event => toggleItem(item, event.target.checked)} className="mt-1 shrink-0" />
                       <span>{item}</span>
                     </li>
                   ))}
