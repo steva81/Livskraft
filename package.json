@@ -13,7 +13,8 @@
     "test:http": "node tests/http.cjs",
     "test:goal-safety": "node tests/goal-safety.cjs",
     "test:phase": "node tests/phase.cjs",
-    "test:refinement": "node tests/refinement.cjs"
+    "test:refinement": "node tests/refinement.cjs",
+    "test:next-phase": "node tests/next-phase.cjs"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",

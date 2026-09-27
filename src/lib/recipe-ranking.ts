@@ -1,11 +1,13 @@
 import { parseStringList, canonicalFoodTerm, type RecipeLike } from "./dietary"
 import { type Preferences, type MealSlot } from "./preferences"
 import type { PlannedMeal } from "./plan-types"
+import { parseNutrition } from "./nutrition"
 export function recipeScore(recipe: RecipeLike, p: Preferences): number {
   const tags = parseStringList(recipe.tags)
   const ingredients = recipe.ingredients.toLowerCase()
   const likes = p.likedFoods.toLowerCase().split(",").map(canonicalFoodTerm).filter(Boolean)
-  return likes.filter(word=>ingredients.includes(word)).length +
+  const protein=parseNutrition(recipe.nutrition??null).protein
+  return ((p.primaryGoal === "retain-muscle" || p.primaryGoal === "build-muscle" || p.primaryGoal === "lose") && protein!==null ? Math.min(3,protein/10) : 0) + likes.filter(word=>ingredients.includes(word)).length +
     (tags.includes(`budget:${p.budget}`) ? 2 : 0) +
     (["prediabetes","type1","type2"].includes(p.health) ? (tags.includes("fiber-source") ? 3 : 0) + (tags.includes("balanced-meal") ? 2 : 0) : 0)
 }

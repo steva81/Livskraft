@@ -1,4 +1,6 @@
 "use client"
+import { bodyLabels } from "@/lib/body-data"
+import { GoalSummary } from "@/components/goal-summary"
 import { Localize, useLanguage } from "@/lib/i18n/provider"
 
 import Link from "next/link"
@@ -52,6 +54,8 @@ export default function ProfilePage() {
     ]},
   ]
   return <Localize>{<div className="max-w-3xl mx-auto space-y-6">
+      <GoalSummary />
+      <div data-localize="off" className="border rounded p-4"><p>{bodyLabels[language].year}: {preferences?.birthYear??"—"}</p><p>{bodyLabels[language].sex}: {bodyLabels[language][preferences?.sexForEnergy??"undisclosed"]}</p></div>
     <div><h1 className="text-3xl font-bold">Min profil</h1><p className="text-muted-foreground">Din sparade profil och dina vardagsval.</p></div>
     <Card><CardHeader><CardTitle>{user.name}</CardTitle><CardDescription>{user.email}</CardDescription></CardHeader><CardContent>
       {user.email === "anna@demo.com" && <p className="bg-amber-50 text-amber-900 p-3 rounded mb-3">Demokonto med exempeldata.</p>}

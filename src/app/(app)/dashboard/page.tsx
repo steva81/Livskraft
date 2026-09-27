@@ -13,6 +13,7 @@ import type { PublicUser } from "@/app/actions"
 import type { DailyLog, Workout } from "@prisma/client"
 import type { PlannedMeal } from "@/lib/plan-types"
 import Link from "next/link"
+import { DailyNutrition } from "@/components/daily-nutrition"
 
 export default function DashboardPage() {
   const {language}=useLanguage()
@@ -80,6 +81,7 @@ export default function DashboardPage() {
       </div>
 
       <div className="rounded-xl bg-primary/5 p-4 space-y-2"><p>Nästa steg: {meals.find(m => !eaten.includes(`${m.slot}:${m.recipeId}`) && !eaten.includes(m.title))?.title ?? "Fortsätt med rörelse eller återhämtning i din takt."}</p><p className="text-sm">Dagen behöver inte bli perfekt. Fortsätt med nästa vanliga måltid eller pass.</p><Link className="text-primary underline text-sm" href="/meals">Kontrollera veckans ingredienser och inköpslista</Link></div>
+      <DailyNutrition refreshKey={todayLog.mealsEaten ?? ""} onPlanChanged={async()=>{const day=await getTodayPlanContext();setMeals(day.meals);setWorkout(day.workout);setActivity(day.activity)}} />
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         <Card className="col-span-1 lg:col-span-2">
           <CardHeader className="pb-3">

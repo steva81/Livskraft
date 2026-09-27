@@ -3,6 +3,7 @@ import {useEffect,useState} from "react"
 import Link from "next/link"
 import {Localize} from "@/lib/i18n/provider"
 import {getUser,saveMyPlan,type PublicUser} from "@/app/actions"
+import {BodyDataEditor} from "@/components/body-data"
 import {GoalEditor} from "@/components/goal-editor"
 import {SlotChoices,MeasurementChoices} from "@/components/planning-preferences"
 import {readPreferences,healthOptions,type Preferences} from "@/lib/preferences"
@@ -13,7 +14,7 @@ export default function MyPlan(){
  const [welcome,setWelcome]=useState(false)
  const [user,setUser]=useState<PublicUser|null>(null),[error,setError]=useState("")
  useEffect(()=>{setWelcome(new URLSearchParams(window.location.search).has("welcome"));getUser().then(setUser).catch(()=>setError("Kunde inte ladda profilen. Försök igen."))},[])
- return <Localize><div className="max-w-3xl mx-auto space-y-6"><h1 className="text-3xl font-bold">Min plan</h1>{welcome&&<section className="rounded border bg-secondary p-4 space-y-3"><h2 className="font-semibold">Din grundplan är klar. Vill du göra den ännu mer personlig?</h2><Link className="underline" href="/dashboard">Börja med min grundplan</Link></section>}<p>Här anpassar du planen. Registrera dagens resultat under Framsteg.</p><nav className="flex flex-wrap gap-3 text-sm underline">{[["food","Mat"],["health","Hälsoanpassning"],["training","Träning"],["daily","Vardag"],["measurements","Kroppsmått"]].map(([id,label])=><a key={id} href={`#${id}`}>{label}</a>)}</nav>{user?<><GoalEditor user={user} onSaved={setUser}/><PlanForm initial={user}/></>:<p role="status">{error||"Laddar din profil…"}</p>}</div></Localize>
+ return <Localize><div className="max-w-3xl mx-auto space-y-6"><h1 className="text-3xl font-bold">Min plan</h1>{welcome&&<section className="rounded border bg-secondary p-4 space-y-3"><h2 className="font-semibold">Din grundplan är klar. Vill du göra den ännu mer personlig?</h2><Link className="underline" href="/dashboard">Börja med min grundplan</Link></section>}<p>Här anpassar du planen. Registrera dagens resultat under Framsteg.</p><nav className="flex flex-wrap gap-3 text-sm underline">{[["food","Mat"],["health","Hälsoanpassning"],["training","Träning"],["daily","Vardag"],["measurements","Kroppsmått"]].map(([id,label])=><a key={id} href={`#${id}`}>{label}</a>)}</nav>{user?<><BodyDataEditor user={user} onSaved={setUser}/><GoalEditor user={user} onSaved={setUser}/><PlanForm initial={user}/></>:<p role="status">{error||"Laddar din profil…"}</p>}</div></Localize>
 }
 function PlanForm({initial}:{initial:PublicUser}){
  const [p,setP]=useState(readPreferences(initial.preferences)),[rules,setRules]=useState(parseStringList(initial.dietRestrictions).filter(v=>!v.startsWith("allergy:"))),[allergies,setAllergies]=useState(parseStringList(initial.dietRestrictions).filter(v=>v.startsWith("allergy:")).map(v=>v.slice(8)).join(", ")),[dislikes,setDislikes]=useState(parseStringList(initial.dislikedFoods).join(", ")),[life,setLife]=useState(parseStringList(initial.lifestyle)),[location,setLocation]=useState(initial.trainingLocation),[level,setLevel]=useState(initial.trainingLevel),[activity,setActivity]=useState(initial.activityLevel||"light"),[saving,setSaving]=useState(false),[message,setMessage]=useState("")

@@ -1,11 +1,13 @@
 "use client"
 import { Localize, LanguageSelector, useLanguage } from "@/lib/i18n/provider"
 
+import { BirthInputs } from "@/components/body-data"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { submitOnboarding } from "@/app/actions"
+import { primaryGoals, goalLabels, type PrimaryGoal } from "@/lib/nutrition"
 import { defaultPreferences } from "@/lib/preferences"
 import { assessGoal, timeframeOptions } from "@/lib/goal-safety"
 import { signIn } from "next-auth/react"
@@ -24,7 +26,7 @@ export default function OnboardingPage() {
     password: "",
     currentWeight: "",
     height: "", waist: "", allergies: "",
-    preferences: { ...defaultPreferences },
+    preferences: { ...defaultPreferences, primaryGoal: "lose" as PrimaryGoal },
     targetWeight: "",
     timeframeWeeks: "12",
     activityLevel: "moderate",
@@ -50,7 +52,8 @@ export default function OnboardingPage() {
     })
   }
 
-  const safety = assessGoal(formData)
+  const maintaining = ["maintain","retain-muscle"].includes(formData.preferences.primaryGoal)
+  const safety = formData.currentWeight || formData.targetWeight ? assessGoal({...formData,targetWeight:maintaining?formData.currentWeight:formData.targetWeight}) : {level:"normal",message:""}
   const warning = (showGoalErrors || (formData.currentWeight && formData.targetWeight)) ? safety.message : ""
   const checkSafety = () => {
     setShowGoalErrors(true)
@@ -69,6 +72,7 @@ export default function OnboardingPage() {
     setError("")
     const dataToSubmit = {
       ...formData,
+      targetWeight:maintaining?formData.currentWeight:formData.targetWeight,
       preferences:{...formData.preferences,language,dailySteps:({sedentary:4000,light:5500,moderate:7000,active:9000} as Record<string,number>)[formData.activityLevel]??5000},
       dietRestrictions: [...formData.dietRestrictions, ...formData.allergies.split(",").map(s => s.trim().toLowerCase()).filter(Boolean).map(s => `allergy:${s}`)],
       dislikedFoods: formData.dislikedFoods.split(",").map((s) => s.trim()).filter(Boolean),
@@ -118,6 +122,7 @@ export default function OnboardingPage() {
                 <label className="text-sm font-medium leading-none">Lösenord</label>
                 <input aria-label="Lösenord" type="password" className="w-full p-2 border rounded-md mt-1" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} placeholder="Minst 10 tecken" />
               </div>
+<BirthInputs value={formData.preferences} onChange={body=>setFormData({...formData,preferences:{...formData.preferences,...body}})}/><label className="block">{language==="en"?"Primary goal":"Huvudmål"}<select className="w-full border rounded p-2" value={formData.preferences.primaryGoal} onChange={e=>setFormData({...formData,preferences:{...formData.preferences,primaryGoal:e.target.value as PrimaryGoal}})}>{primaryGoals.map(g=><option key={g} value={g}>{goalLabels[language][g]}</option>)}</select></label>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-sm font-medium leading-none">Nuvarande vikt (kg)</label>
@@ -125,7 +130,7 @@ export default function OnboardingPage() {
                 </div>
                 <div>
                   <label className="text-sm font-medium leading-none">Målvikt (kg)</label>
-                  <input aria-label="Målvikt (kg)" type="number" className="w-full p-2 border rounded-md mt-1" value={formData.targetWeight} onChange={e => setFormData({...formData, targetWeight: e.target.value})} />
+                  <input aria-label="Målvikt (kg)" type="number" className="w-full p-2 border rounded-md mt-1" disabled={maintaining} value={maintaining?formData.currentWeight:formData.targetWeight} onChange={e => setFormData({...formData, targetWeight: e.target.value})} />
                 </div>
               </div>
               <div>

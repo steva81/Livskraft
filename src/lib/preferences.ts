@@ -1,9 +1,11 @@
+import { validBodyData, type BodyData } from "./body-data"
 export const mealSlots = ["Frukost", "Lunch", "Middag", "Mellanmål"] as const
 export type MealSlot = typeof mealSlots[number]
 export const measurementLabels = { hip: "Höft", chest: "Bröst", thigh: "Lår", arm: "Överarm", neck: "Hals", calf: "Vad" } as const
 export type MeasurementKey = keyof typeof measurementLabels
 export const healthOptions = { none: "Ingen särskild hälsoanpassning", prediabetes: "Prediabetes", type1: "Typ 1-diabetes", type2: "Typ 2-diabetes", undisclosed: "Vill inte ange / Annat" }
-export type Preferences = {
+export type Preferences = BodyData & {
+  primaryGoal?: "lose" | "maintain" | "retain-muscle" | "build-muscle"
   dailySteps: number; cookingMinutes: number; workoutMinutes: number; trainingDays: number
   budget: string; likedFoods: string; equipment: string; workSchedule: string
   measurements: string
@@ -19,7 +21,8 @@ export function validSlots(value: unknown): value is MealSlot[] {
   return Array.isArray(value) && value.length <= 4 && new Set(value).size === value.length && value.every(v => mealSlots.includes(v))
 }
 export function validPreferences(p: Preferences): boolean {
-  return !!p && ["low", "normal", "high"].includes(p.budget) && ["dagtid", "kvall", "natt", "skift", "oregelbundet"].includes(p.workSchedule) &&
+  return !!p && (p.primaryGoal === undefined || ["lose", "maintain", "retain-muscle", "build-muscle"].includes(p.primaryGoal)) &&
+    validBodyData(p) && ["low", "normal", "high"].includes(p.budget) && ["dagtid", "kvall", "natt", "skift", "oregelbundet"].includes(p.workSchedule) &&
     Object.hasOwn(healthOptions, p.health) && ["sv", "en"].includes(p.language) && validSlots(p.mealSlots) &&
     Array.isArray(p.trackedMeasurements) && p.trackedMeasurements.length <= 6 && p.trackedMeasurements.every(k => Object.hasOwn(measurementLabels, k)) &&
     [p.likedFoods, p.equipment, p.measurements].every(v => typeof v === "string" && v.length <= 500) &&

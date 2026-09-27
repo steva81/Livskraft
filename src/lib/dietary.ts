@@ -8,6 +8,7 @@ const foodAliases: Record<string,string> = { nuts:"nötter", peanuts:"jordnötte
 export function canonicalFoodTerm(value:string):string { const key=value.trim().toLowerCase(); return foodAliases[key]??key }
 
 export type RecipeLike = {
+  nutrition?: string
   tags: string
   ingredients: string
   title?: string

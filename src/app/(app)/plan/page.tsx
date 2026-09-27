@@ -1,4 +1,5 @@
 "use client"
+import { GoalSummary } from "@/components/goal-summary"
 import { Localize, useLanguage } from "@/lib/i18n/provider"
 
 import { useEffect, useState } from "react"
@@ -83,6 +84,7 @@ export default function WeeklyPlanPage() {
 
   return <Localize>{(
     <div className="max-w-4xl mx-auto space-y-6">
+      <GoalSummary />
       {safety?.message && <p role="alert" className="rounded bg-amber-50 p-3 text-sm text-amber-900">{safety.message}</p>}
       <div>
         <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">

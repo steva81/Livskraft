@@ -39,6 +39,35 @@ model User {
   weeklyPlans      WeeklyPlan[]
   adaptiveDecisions AdaptiveDecision[]
   coachExchanges CoachExchange[]
+  ownMeals OwnMeal[]
+  nutritionDecisions NutritionDecision[]
+}
+
+model NutritionDecision {
+  id String @id @default(uuid())
+  userId String
+  proposalKey String
+  status String
+  summary String
+  createdAt DateTime @default(now())
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([userId, proposalKey])
+}
+
+// Manual values are approximate; unknown nutrients remain null in nutrition JSON.
+model OwnMeal {
+  id String @id @default(uuid())
+  userId String
+  name String
+  components String
+  portion String
+  mealType String
+  eatenAt DateTime
+  nutrition String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId, eatenAt])
 }
 
 model DailyLog {

@@ -1,4 +1,5 @@
 "use client"
+import { GoalSummary } from "@/components/goal-summary"
 import { Localize, useLanguage } from "@/lib/i18n/provider"
 
 import { ExerciseHelp } from "@/components/exercise-help"
@@ -76,6 +77,7 @@ export default function TrainingPage() {
 
   return <Localize>{(
     <div className="max-w-4xl mx-auto space-y-6">
+      <GoalSummary />
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Träning</h1>
         <p className="text-muted-foreground">

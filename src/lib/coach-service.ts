@@ -1,3 +1,5 @@
+import { goalLabels, goalGuidance, type PrimaryGoal } from "./nutrition"
+import type { dailyNutritionForUser } from "./daily-nutrition"
 import { translate } from "./i18n/catalog"
 import { rankRecipes } from "./recipe-ranking"
 import { defaultPreferences, type Preferences } from "./preferences"
@@ -9,6 +11,7 @@ import { workoutFits, workoutInstructions, type WorkoutCandidate } from "./train
 
 type CoachRecipe = { id:string; title:string; ingredients:string; tags:string; prepTime:number }
 export interface CoachContext {
+  primaryGoal?: PrimaryGoal; nutrition?: Awaited<ReturnType<typeof dailyNutritionForUser>>
   goal?: GoalInput
   health?: string; language?: string; budget?: string; workSchedule?: string
   userName:string; restrictions:string[]; dislikedFoods:string[]; stepGoal:number; stepsToday?:number
@@ -70,10 +73,23 @@ export async function getCoachReply(input:string,ctx:CoachContext, recentHistory
   const safetyInput = isFollowUp(input) ? `${history.filter(m=>m.role==="user").at(-1)?.text ?? ""} ${input}` : input
   const safety = ctx.goal ? savedGoalSafety(ctx.goal) : null
   if (safety?.level === "blocked") return en ? `${translate(safety.message,"en")} Edit your goal in My Plan. Coach cannot bypass this limit.` : `${safety.message} Ändra målet under Min plan. Coach kan inte kringgå denna gräns.`
+  const nutrition=ctx.nutrition, target=nutrition?.target
+  const goalText=ctx.primaryGoal ? goalLabels[en?"en":"sv"][ctx.primaryGoal]+". "+goalGuidance(ctx.primaryGoal,en) : ""
+  const dangerous=/insulin|dos(?:e|ing)?|medicin|medication|diagnos|treat|behandl|fasta|fasting|starv|svält|straff|punish|skip.*meal|hoppa över/i.test(safetyInput)
+  if (!dangerous && ctx.primaryGoal && /protein|musk|muscle|pizza|snack|mellanmål|extra (?:food|mat)|över.*(?:kalori|mål)|over.*(?:calori|target)/i.test(input)) {
+    if (/musk|muscle/i.test(input) && !/protein/i.test(input)) return goalText + (en ? ` ${target?`Estimated energy: ${target.calories} kcal/day; protein: ${target.protein} g/day.`:""} Keep resistance training consistent, progress gradually when the current load feels manageable, and allow recovery. Change your primary goal in My Plan if needed.` : ` ${target?`Uppskattad energi: ${target.calories} kcal/dag; protein: ${target.protein} g/dag.`:""} Träna styrka regelbundet, öka gradvis när nuvarande belastning känns hanterbar och ge plats för återhämtning. Ändra huvudmål i Min plan om det behövs.`)
+    if (/protein/i.test(input)) {
+      const reported=input.match(/(\d+(?:[.,]\d+)?)\s*g(?:ram)?\s*(?:of\s+)?protein/i)?.[1]
+      const acknowledgment=reported ? (en?`You mention ${reported} g protein; that may include food not yet logged. `:`Du nämner ${reported} g protein; det kan inkludera mat som inte registrerats än. `) : ""
+      const option=safeRecipes(ctx)[0]
+      return en ? `${acknowledgment}${goalText} ${target?`Your approximate protein target is ${target.protein} g/day; logged today: ${Math.round(nutrition!.consumed.sum.protein)} g (unknown values excluded).`:"Include a protein source with regular meals."} ${option?`One option within your dietary filters is ${translate(option.title,"en")}; check the recipe and portion.`:"No verified recipe matches your filters."} You do not need to force food to hit an exact number.` : `${acknowledgment}${goalText} ${target?`Ditt ungefärliga proteinmål är ${target.protein} g/dag; registrerat idag: ${Math.round(nutrition!.consumed.sum.protein)} g (okända värden ingår inte).`:"Välj en proteinkälla till vanliga måltider."} ${option?`Ett alternativ inom dina kostfilter är ${option.title}; kontrollera recept och portion.`:"Inget kontrollerat recept passar dina filter."} Du behöver inte tvinga i dig mat för att träffa en exakt siffra.`
+    }
+    return en ? `${goalText} ${nutrition?`You have logged ${nutrition.ownMeals.length} own meals today.`:""} If you replaced dinner, log the own meal and leave the planned dinner uncompleted to avoid counting twice. Continue normally. Today lets you review a gentle day/week adjustment when a suitable swap exists; nothing changes until you approve. No fasting or punishment exercise.` : `${goalText} ${nutrition?`Du har registrerat ${nutrition.ownMeals.length} egna måltider idag.`:""} Om middagen ersattes, registrera den egna måltiden och lämna planerad middag omarkerad så den inte räknas dubbelt. Fortsätt normalt. På Idag kan du granska ett varsamt dags-/veckoförslag när ett lämpligt byte finns; inget ändras före ditt godkännande. Ingen fasta eller straffträning.`
+  }
   // Never delegate goal or restrictive-diet requests to the optional classifier.
   if (/vikt|kg|kilo|banta|kalori|kcal|diet(?!ary)|fasta|svält|straff|kompens|weight|lose|gain|fasting|starv|punish|restrict|burn|bränn|förbränn|hoppa över|skip.*meal|träna extra|extra.*(?:träning|exercise)|gå (?:ner|ned|upp)|snabbare|fortare/i.test(safetyInput)) {
-    if(en) return `${safety?.message ? translate(safety.message,"en") : "Weight goals are assessed from current weight, target weight and timeframe in My Plan."} Coach cannot bypass goal limits. Keep regular meals and normal training; never use fasting, punishment exercise or extreme calorie restriction to reach a goal or compensate for food.`
-    return `${safety?.message || "Viktmål bedöms från nuvarande vikt, målvikt och tidsram under Min plan. Ändra målet där för att få samma säkerhetskontroll som i planeringen."} Coach kan inte kringgå målgränserna. Fortsätt med regelbundna måltider och vanlig träning; använd aldrig fasta, straffträning eller extrem kaloribegränsning för att nå ett mål eller kompensera för mat.`
+    if(en) return `${goalText} ${safety?.message ? translate(safety.message,"en") : "Weight goals are assessed from current weight, target weight and timeframe in My Plan."} Coach cannot bypass goal limits. Keep regular meals and normal training; never use fasting, punishment exercise or extreme calorie restriction to reach a goal or compensate for food.`
+    return `${goalText} ${safety?.message || "Viktmål bedöms från nuvarande vikt, målvikt och tidsram under Min plan. Ändra målet där för att få samma säkerhetskontroll som i planeringen."} Coach kan inte kringgå målgränserna. Fortsätt med regelbundna måltider och vanlig träning; använd aldrig fasta, straffträning eller extrem kaloribegränsning för att nå ett mål eller kompensera för mat.`
   }
   const recipesForHealth=safeRecipes(ctx)
   if (/diabet|prediabet/i.test(input) && /dinner|meal|food|eat|recommend|middag|måltid|mat|äta|rekommend/i.test(input) && !/insulin|dos|medicin|medication|symptom|symtom|blodsocker|blood sugar|treat|behandl/i.test(input)) {

@@ -1,4 +1,7 @@
 "use client"
+import { goalGuidance, goalLabels, progressGuidance } from "@/lib/nutrition"
+import { WeeklyNutrition } from "@/components/weekly-nutrition"
+import { NutritionBalance } from "@/components/nutrition-balance"
 import Link from "next/link"
 import { Localize, useLanguage } from "@/lib/i18n/provider"
 
@@ -76,6 +79,9 @@ export default function ProgressPage() {
         <p className="text-muted-foreground">Trender, mätningar och din adaptiva vecka.</p>
       </div>
 
+      {summary && <div data-localize="off" className="rounded-xl border p-4"><p className="font-semibold">{goalLabels[language][summary.primaryGoal]}</p><p>{goalGuidance(summary.primaryGoal,language==="en")}</p><p>{progressGuidance(summary.primaryGoal,average!=null&&first!=null?average-first:null,language==="en")}</p></div>}
+      <WeeklyNutrition />
+      <NutritionBalance trend />
       <Card><CardHeader><CardTitle>Registrera dagens mätning</CardTitle><CardDescription>Frivilligt. En enskild mätning ändrar inte planen.</CardDescription></CardHeader><CardContent>
         <form className="space-y-3" onSubmit={async e => {
           e.preventDefault(); setSaving(true)
