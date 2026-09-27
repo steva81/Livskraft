@@ -1,4 +1,8 @@
 "use client"
+import { Localize, useLanguage } from "@/lib/i18n/provider"
+
+import { ExerciseHelp } from "@/components/exercise-help"
+import { type Exercise } from "@/lib/exercise-media"
 import { displayValue } from "@/lib/display"
 import { useEffect, useMemo, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -11,9 +15,10 @@ import type { Workout, WorkoutLog } from "@prisma/client"
 import { readPreferences } from "@/lib/preferences"
 import { workoutFits } from "@/lib/training"
 
-type Exercise = { name: string; sets: number; reps: string; durationMin?: number }
+
 
 export default function TrainingPage() {
+  const {language}=useLanguage()
   const { mode, userId, sessionStatus } = useMode()
   const [activeTab, setActiveTab] = useState<"plan" | "log">("plan")
   const [placeFilter, setPlaceFilter] = useState<"all" | "home" | "gym">("all")
@@ -66,10 +71,10 @@ export default function TrainingPage() {
   }, [workouts, placeFilter, showShort])
 
   if (sessionStatus === "loading" || loading) {
-    return <div className="p-8 text-center text-muted-foreground">Laddar träningsplan...</div>
+    return <Localize>{<div className="p-8 text-center text-muted-foreground">Laddar träningsplan...</div>}</Localize>
   }
 
-  return (
+  return <Localize>{(
     <div className="max-w-4xl mx-auto space-y-6">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Träning</h1>
@@ -142,7 +147,7 @@ export default function TrainingPage() {
                 const exercises = JSON.parse(workout.exercises ?? "[]") as Exercise[]
                 const done = isCompletedToday(workout.id)
                 const recommended = (preferredPlace === "both" || workout.type === preferredPlace) && workoutFits(workout,preferredLevel,preferences.equipment,preferences.workoutMinutes)
-                return (
+                return <Localize key={workout.id}>{(
                   <Card key={workout.id} className={done ? "opacity-75" : ""}>
                     <CardHeader className="pb-3">
                       <div className="flex justify-between items-start">
@@ -170,6 +175,7 @@ export default function TrainingPage() {
                         {exercises.map((ex, idx) => (
                           <div key={idx} className="flex flex-wrap justify-between gap-x-3 text-sm">
                             <span>{ex.name}</span>
+                            <ExerciseHelp exercise={ex}/>
                             {mode === "advanced" ? (
                               <span className="text-muted-foreground">
                                 {ex.sets} set × {ex.reps}
@@ -186,7 +192,7 @@ export default function TrainingPage() {
                       </Button>
                     </CardContent>
                   </Card>
-                )
+                )}</Localize>
               })}
             </div>
           )}
@@ -205,12 +211,12 @@ export default function TrainingPage() {
           ) : (
             logs.map((entry) => {
               const workout = workouts.find((w) => w.id === entry.workoutId)
-              return (
+              return <Localize key={entry.id}>{(
                 <div key={entry.id} className="flex items-center justify-between p-4 bg-white border rounded-lg">
                   <div>
                     <p className="font-medium">{workout?.title ?? "Okänt pass"}</p>
                     <p className="text-sm text-muted-foreground">
-                      {new Date(entry.date).toLocaleDateString("sv-SE", {
+                      {new Date(entry.date).toLocaleDateString(language==="en"?"en-GB":"sv-SE", {
                         weekday: "long",
                         month: "long",
                         day: "numeric",
@@ -220,11 +226,11 @@ export default function TrainingPage() {
                   </div>
                   <CheckCircle2 className="w-5 h-5 text-primary" />
                 </div>
-              )
+              )}</Localize>
             })
           )}
         </div>
       )}
     </div>
-  )
+  )}</Localize>
 }

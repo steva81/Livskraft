@@ -1,4 +1,9 @@
 "use client"
+import Link from "next/link"
+import { Localize, useLanguage } from "@/lib/i18n/provider"
+
+import { MeasurementInputs } from "@/components/planning-preferences"
+import { readMeasurements, measurementLabels, type MeasurementKey } from "@/lib/preferences"
 import { useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -12,13 +17,14 @@ import type { AdaptiveState } from "@/lib/adaptive"
 type Summary = Awaited<ReturnType<typeof getProgressSummary>>
 
 export default function ProgressPage() {
+  const {language}=useLanguage()
   const { mode, sessionStatus } = useMode()
   const [summary, setSummary] = useState<Summary>(null)
   const [adaptive, setAdaptive] = useState<AdaptiveState | null>(null)
   const [loading, setLoading] = useState(true)
   const [weight, setWeight] = useState("")
   const [waist, setWaist] = useState("")
-  const [measurements, setMeasurements] = useState("")
+  const [values,setValues]=useState<Partial<Record<MeasurementKey,number>>>({})
   const [message, setMessage] = useState("")
   const [saving, setSaving] = useState(false)
 
@@ -31,7 +37,7 @@ export default function ProgressPage() {
   }, [sessionStatus])
 
   if (sessionStatus === "loading" || loading) {
-    return <div className="p-8 text-center text-muted-foreground">Laddar framsteg...</div>
+    return <Localize>{<div className="p-8 text-center text-muted-foreground">Laddar framsteg...</div>}</Localize>
   }
 
   const latest = summary?.latestWeight
@@ -40,7 +46,7 @@ export default function ProgressPage() {
   const trendText =
     average != null && first != null
       ? average < first
-        ? `Veckosnittet har minskat (${first.toLocaleString("sv-SE", {minimumFractionDigits:1,maximumFractionDigits:1})} → ${average.toLocaleString("sv-SE", {minimumFractionDigits:1,maximumFractionDigits:1})} kg). Fokusera på veckan, inte en enskild dag.`
+        ? `Veckosnittet har minskat (${first.toLocaleString(language==="en"?"en-GB":"sv-SE", {minimumFractionDigits:1,maximumFractionDigits:1})} → ${average.toLocaleString(language==="en"?"en-GB":"sv-SE", {minimumFractionDigits:1,maximumFractionDigits:1})} kg). Fokusera på veckan, inte en enskild dag.`
         : average > first
           ? `Vikten har rört sig uppåt i loggarna. Det är data, inte ett omdöme — vi ändrar inte planen till något extremt.`
           : "Vikten är stabil i de loggar vi har. Det är ett bra utgångsläge."
@@ -63,7 +69,7 @@ export default function ProgressPage() {
     finally { setSaving(false) }
   }
 
-  return (
+  return <Localize>{(
     <div className="max-w-4xl mx-auto space-y-6">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Framsteg</h1>
@@ -73,13 +79,14 @@ export default function ProgressPage() {
       <Card><CardHeader><CardTitle>Registrera dagens mätning</CardTitle><CardDescription>Frivilligt. En enskild mätning ändrar inte planen.</CardDescription></CardHeader><CardContent>
         <form className="space-y-3" onSubmit={async e => {
           e.preventDefault(); setSaving(true)
-          try { await saveMeasurements({ weight: weight ? Number(weight) : undefined, waist: waist ? Number(waist) : undefined, measurements: measurements || undefined }); setSummary(await getProgressSummary()); setAdaptive(await getAdaptiveWeek()); setMessage("Mätningen är sparad.") }
+          try { await saveMeasurements({ weight: weight ? Number(weight) : undefined, waist: waist ? Number(waist) : undefined, values: Object.keys(values).length ? values : undefined }); setSummary(await getProgressSummary()); setAdaptive(await getAdaptiveWeek()); setMessage("Mätningen är sparad.") }
           catch { setMessage("Kunde inte spara. Kontrollera värdena och försök igen.") }
           finally { setSaving(false) }
         }}>
           <div className="grid grid-cols-2 gap-3"><label>Vikt (kg)<input type="number" min="30" max="400" step="0.1" className="border rounded p-2 w-full" value={weight} onChange={e => setWeight(e.target.value)} /></label><label>Midja (cm)<input type="number" min="30" max="250" step="0.1" className="border rounded p-2 w-full" value={waist} onChange={e => setWaist(e.target.value)} /></label></div>
-          {mode === "advanced" && <label className="block">Övriga mått<input maxLength={500} className="border rounded p-2 w-full" value={measurements} onChange={e => setMeasurements(e.target.value)} placeholder="T.ex. höft 95 cm" /></label>}
-          <Button disabled={saving || (!weight && !waist && !measurements)}>Spara mätning</Button><p role="status" className="text-sm">{message}</p>
+          <Link className="text-sm underline" href="/my-plan#measurements">Välj kroppsmått i Min plan</Link>
+          <MeasurementInputs tracked={summary?.preferences.trackedMeasurements??[]} values={values} onChange={setValues}/>
+          <Button disabled={saving || (!weight && !waist && !Object.keys(values).length)}>Spara mätning</Button><p role="status" className="text-sm">{message}</p>
         </form>
       </CardContent></Card>
       <Card className="border-primary/50 bg-primary/5">
@@ -89,7 +96,7 @@ export default function ProgressPage() {
         <CardContent className="space-y-4">
           <p>{adherenceMessage(summary?.workoutsThisWeek ?? 0,summary?.plannedWorkouts ?? 0)}</p>
           {adaptive && <>
-            <p className="text-sm font-medium">Gäller veckan som börjar {new Date(adaptive.targetStart).toLocaleDateString("sv-SE", {day:"numeric",month:"long"})}.</p>
+            <p className="text-sm font-medium">Gäller veckan som börjar {new Date(adaptive.targetStart).toLocaleDateString(language==="en"?"en-GB":"sv-SE", {day:"numeric",month:"long"})}.</p>
             <p className="text-sm">{adaptive.reason}</p>
             {adaptive.changes.length>0 && <div><p className="font-medium">{adaptive.status==="accepted" ? "Sparade ändringar för nästa vecka" : adaptive.status==="declined" ? "Förslaget du avböjde" : "Förslag för nästa vecka"}</p><ul className="list-disc pl-5 text-sm space-y-1">{adaptive.changes.map(c=><li key={c.dayId+c.description}>{c.description}</li>)}</ul><p className="text-sm mt-2">{adaptive.unchanged}</p></div>}
             {adaptive.status==="proposed" && <div className="flex gap-3 flex-wrap"><Button disabled={saving} onClick={()=>choose(true)}>Ja, anpassa nästa vecka</Button><Button disabled={saving} variant="outline" onClick={()=>choose(false)}>Nej, behåll planen</Button></div>}
@@ -109,17 +116,17 @@ export default function ProgressPage() {
           <CardContent>
             <p className="text-sm text-muted-foreground mb-3">{trendText}</p>
             <div className="flex items-end gap-2 mb-6">
-              <span className="text-4xl font-bold">{latest != null ? latest.toLocaleString("sv-SE", {minimumFractionDigits:1,maximumFractionDigits:1}) : "–"}</span>
+              <span className="text-4xl font-bold">{latest != null ? latest.toLocaleString(language==="en"?"en-GB":"sv-SE", {minimumFractionDigits:1,maximumFractionDigits:1}) : "–"}</span>
               <span className="text-muted-foreground mb-1">kg</span>
             </div>
             {mode === "advanced" && canChartWeight ? <div>
               <svg viewBox="0 0 300 130" role="img" aria-label="Registrerad vikt över de senaste två veckorna" className="w-full h-40">
                 <polyline points={weightPoints.map(p=>p.x+","+p.y).join(" ")} fill="none" stroke="currentColor" className="text-primary" strokeWidth="2" />
-                {weightPoints.map(p=><circle key={String(p.log.date)} cx={p.x} cy={p.y} r="3" fill="currentColor" className="text-primary"><title>{new Date(p.log.date).toLocaleDateString("sv-SE")}: {p.log.weight} kg</title></circle>)}
+                {weightPoints.map(p=><circle key={String(p.log.date)} cx={p.x} cy={p.y} r="3" fill="currentColor" className="text-primary"><title>{new Date(p.log.date).toLocaleDateString(language==="en"?"en-GB":"sv-SE")}: {p.log.weight} kg</title></circle>)}
               </svg>
               <p className="text-xs text-muted-foreground">Punkterna visar registrerad vikt i datumordning, ingen prognos.</p>
             </div> : <p className="text-sm text-muted-foreground">{canChartWeight ? "Byt till avancerat läge för mätgrafen." : "Logga fler mätningar över tid för att se din vikttrend."}</p>}
-            {mode === "advanced" && weightLogs.length>0 && <ul className="text-xs mt-3 space-y-1">{weightLogs.map(log=><li key={String(log.date)}>{new Date(log.date).toLocaleDateString("sv-SE")}: {log.weight?.toLocaleString("sv-SE")} kg</li>)}</ul>}
+            {mode === "advanced" && weightLogs.length>0 && <ul className="text-xs mt-3 space-y-1">{weightLogs.map(log=><li key={String(log.date)}>{new Date(log.date).toLocaleDateString(language==="en"?"en-GB":"sv-SE")}: {log.weight?.toLocaleString(language==="en"?"en-GB":"sv-SE")} kg</li>)}</ul>}
 
           </CardContent>
         </Card>
@@ -138,17 +145,20 @@ export default function ProgressPage() {
                 {summary?.waist != null ? `${summary.waist} cm (senast sparat)` : "Ingen mätning sparad"}
               </span>
             </div>
-            {summary?.latestMeasurement?.measurements && <p className="text-sm break-words">Övriga mått ({new Date(summary.latestMeasurement.date).toLocaleDateString("sv-SE")}): {summary.latestMeasurement.measurements}</p>}
-            {mode === "advanced" && <ul className="text-xs space-y-1">{summary?.logs.filter(l=>l.waist!=null||l.measurements).map(l=><li key={String(l.date)}>{new Date(l.date).toLocaleDateString("sv-SE")}: {l.waist!=null ? "midja "+l.waist+" cm" : ""} {l.measurements}</li>)}</ul>}
+            {summary?.preferences.trackedMeasurements.map(key=>{
+              const history=summary.logs.flatMap(log=>{const value=readMeasurements(log.measurements)[key];return value==null?[]:[{date:log.date,value}]})
+              const delta=history.length>=2 ? history[history.length-1].value-history[0].value : null
+              return <Localize key={key}>{<div key={key}><p className="font-medium">{measurementLabels[key]}: {history.at(-1)?.value??"–"} cm</p><p className="text-sm text-muted-foreground">{delta==null?"Minst två mätningar på olika dagar behövs för en jämförelse.":`Förändring mellan registrerade mätningar: ${delta>0?"+":""}${delta.toLocaleString(language==="en"?"en-GB":"sv-SE")} cm.`}</p><ul className="text-xs">{history.map(log=><li key={String(log.date)}>{new Date(log.date).toLocaleDateString(language==="en"?"en-GB":"sv-SE")}: {log.value} cm</li>)}</ul></div>}</Localize>
+            })}
           </CardContent>
         </Card>
         <Card className="md:col-span-2"><CardHeader><CardTitle>Träning denna vecka</CardTitle></CardHeader><CardContent><p>{completedWorkoutsText(summary?.workoutsThisWeek ?? 0)} av {summary?.plannedWorkouts ?? 0} planerade.</p><a className="text-sm text-primary underline" href="/training">Se pass och träningslogg</a></CardContent></Card>
-        <Card className="md:col-span-2"><CardHeader><CardTitle>Steg &amp; vardagsrörelse</CardTitle><CardDescription>Senaste sju dagarna: {summary?.weeklyAverageSteps?.toLocaleString("sv-SE") ?? "–"} steg i snitt per loggad dag. Personligt mål: {summary?.stepGoal?.toLocaleString("sv-SE")} steg.</CardDescription></CardHeader><CardContent>
+        <Card className="md:col-span-2"><CardHeader><CardTitle>Steg &amp; vardagsrörelse</CardTitle><CardDescription>Senaste sju dagarna: {summary?.weeklyAverageSteps?.toLocaleString(language==="en"?"en-GB":"sv-SE") ?? "–"} steg i snitt per loggad dag. Personligt mål: {summary?.stepGoal?.toLocaleString(language==="en"?"en-GB":"sv-SE")} steg.</CardDescription></CardHeader><CardContent>
           <p className="text-sm mb-3">Stegmålet nåddes {summary?.stepGoalDays ?? 0} {(summary?.stepGoalDays ?? 0)===1 ? "dag" : "dagar"}. Ologgade dagar räknas inte som noll.</p>
-          {mode === "advanced" && stepLogs.length>0 && <><p className="text-xs text-muted-foreground mb-2">Loggade dagar under de senaste två veckorna</p><div className="h-28 flex items-end gap-2" role="img" aria-label="Steg per loggad dag">{stepLogs.map(l=><div key={String(l.date)} className="flex-1 bg-primary rounded-t" style={{height:(l.steps/maxSteps*100)+"%"}} title={new Date(l.date).toLocaleDateString("sv-SE")+": "+l.steps+" steg"} />)}</div><ul className="text-xs mt-3 space-y-1">{stepLogs.map(l=><li key={String(l.date)}>{new Date(l.date).toLocaleDateString("sv-SE")}: {l.steps.toLocaleString("sv-SE")} steg</li>)}</ul></>}
+          {mode === "advanced" && stepLogs.length>0 && <><p className="text-xs text-muted-foreground mb-2">Loggade dagar under de senaste två veckorna</p><div className="h-28 flex items-end gap-2" role="img" aria-label="Steg per loggad dag">{stepLogs.map(l=><div key={String(l.date)} className="flex-1 bg-primary rounded-t" style={{height:(l.steps/maxSteps*100)+"%"}} title={new Date(l.date).toLocaleDateString(language==="en"?"en-GB":"sv-SE")+": "+l.steps+" steg"} />)}</div><ul className="text-xs mt-3 space-y-1">{stepLogs.map(l=><li key={String(l.date)}>{new Date(l.date).toLocaleDateString(language==="en"?"en-GB":"sv-SE")}: {l.steps.toLocaleString(language==="en"?"en-GB":"sv-SE")} steg</li>)}</ul></>}
           {stepLogs.length===0 && <p className="text-sm text-muted-foreground">Spara dagens steg på Idag-sidan för att börja.</p>}
         </CardContent></Card>
       </div>
     </div>
-  )
+  )}</Localize>
 }

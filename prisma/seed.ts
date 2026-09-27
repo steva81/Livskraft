@@ -1,3 +1,5 @@
+import { recipeQuantities } from "./recipe-quality"
+import { expandedRecipes } from "./expanded-recipes"
 import { PrismaClient } from "@prisma/client"
 import { hashPassword } from "../src/lib/password"
 import { recipeInstructions } from "./recipe-instructions"
@@ -134,11 +136,13 @@ async function main() {
   for (const recipe of recipeLibrary) {
     const instructions = JSON.stringify(recipeInstructions[recipe.title] ?? JSON.parse(recipe.instructions))
     const existing = await prisma.recipe.findFirst({ where: { title: recipe.title } })
-    if (!existing) await prisma.recipe.create({ data: { ...recipe, instructions } })
-    else await prisma.recipe.update({ where: { id:existing.id }, data: {
-      instructions,
-      ...refineRecipeData({ ...existing, ingredients: existing.ingredients.replaceAll("1 liter grönsaksbuljong","1 liter färdigblandad grönsaksbuljong") }),
-    } })
+    const data = {...recipe, ...refineRecipeData(recipe), instructions, ingredients:JSON.stringify(recipeQuantities[recipe.title]), nutrition:"{}", description:"1 receptportion. Kontrollera produktmärkningen och anpassa mängden efter hunger."}
+    if (!existing) await prisma.recipe.create({data})
+    else await prisma.recipe.update({where:{id:existing.id},data})
+  }
+
+  for (const recipe of expandedRecipes) {
+    await prisma.recipe.upsert({where:{id:recipe.id},create:recipe,update:recipe})
   }
 
   const workoutLibrary = [

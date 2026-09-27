@@ -7,7 +7,7 @@ const labels: Record<string, string> = {
   sedentary: "Mestadels stillasittande", light: "Lätt aktiv", moderate: "Måttligt aktiv", active: "Aktiv", very_active: "Mycket aktiv",
   "office-worker": "Stillasittande arbete", "active-job": "Fysiskt aktivt arbete", travels: "Reser ofta", family: "Familj och barn",
   "no-microwave": "Saknar mikrovågsugn", "no-fridge": "Saknar kylskåp", "meal-prep": "Kan förbereda matlådor",
-  dagtid: "Dagtid", skift: "Skift / oregelbundna tider", natt: "Nattarbete", low: "Låg", normal: "Normal",
+  dagtid: "Dagtid", kvall: "Kvällstid", oregelbundet: "Oregelbundna tider", skift: "Skift", natt: "Nattarbete", low: "Låg", normal: "Normal", high: "Hög", snack: "Mellanmål", "budget:low": "Låg budget", "budget:normal": "Normal budget", "budget:high": "Hög budget", "fiber-source": "Fiberrika ingredienser", "balanced-meal": "Varierad måltid", "family-friendly": "Familjevänlig",
 }
 
 export function displayValue(value: string | null | undefined): string {

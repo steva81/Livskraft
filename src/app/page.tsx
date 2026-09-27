@@ -1,9 +1,10 @@
+import { Localize, LanguageSelector } from "@/lib/i18n/provider"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { ArrowRight, Leaf, Activity, Salad } from "lucide-react"
 
 export default function LandingPage() {
-  return (
+  return <Localize>{(
     <div className="flex flex-col min-h-screen">
       <header className="px-4 lg:px-6 h-16 flex items-center border-b">
         <Link className="flex items-center justify-center" href="/">
@@ -17,6 +18,7 @@ export default function LandingPage() {
         </nav>
       </header>
       <main className="flex-1">
+          <LanguageSelector />
         <section className="w-full py-12 md:py-24 lg:py-32 xl:py-48 bg-primary/5">
           <div className="container px-4 md:px-6">
             <div className="flex flex-col items-center space-y-4 text-center rounded-2xl">
@@ -79,5 +81,5 @@ export default function LandingPage() {
         </p>
       </footer>
     </div>
-  )
+  )}</Localize>
 }

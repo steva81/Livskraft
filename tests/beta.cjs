@@ -20,6 +20,7 @@ const { recipeMeetsConstraints } = require('../src/lib/dietary')
 const { getCoachReply } = require('../src/lib/coach-service')
 const { hashPassword, verifyPassword } = require('../src/lib/password')
 const { aggregateIngredients } = require('../src/lib/shopping')
+const { parsePlannedMeals } = require('../src/lib/plan-types')
 const { defaultPreferences } = require('../src/lib/preferences')
 const ids = []
 let passed = 0
@@ -62,7 +63,7 @@ async function main() {
     assert.equal(plan.planDays[0].dayOfWeek, 1)
     assert.equal(plan.planDays[6].dayOfWeek, 0)
     const safe = await actions.getRecommendedRecipes()
-    for (const day of plan.planDays) for (const meal of JSON.parse(day.meals)) assert(safe.some(r => r.id === meal.recipeId))
+    for (const day of plan.planDays) for (const meal of parsePlannedMeals(day.meals)) assert(safe.some(r => r.id === meal.recipeId))
     assert.equal(plan.planDays.filter(d=>d.workoutId).length, 2)
     assert((await actions.getShoppingList()).length > 0)
     const shifted = new Date(plan.planDays[0].date); shifted.setDate(shifted.getDate()+7)
@@ -123,7 +124,7 @@ async function main() {
     assert.equal((await actions.getWorkoutLogs()).length,0)
     const plan=await actions.getWeeklyPlan()
     assert.equal(plan.planDays.length,7)
-    assert(plan.planDays.every(d=>JSON.parse(d.meals).length===0))
+    assert(plan.planDays.every(d=>parsePlannedMeals(d.meals).length===0))
     assert.equal((await actions.getShoppingList()).length,0)
     const today=new Date();today.setHours(0,0,0,0)
     for(let i=1;i<=8;i++){const date=new Date(today);date.setDate(date.getDate()-i);await prisma.dailyLog.create({data:{userId:identity,date,steps:900,stepsRecorded:true}})}

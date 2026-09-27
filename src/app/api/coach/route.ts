@@ -5,10 +5,12 @@ import { getCoachContext } from "@/app/actions"
 import { readCoachHistory, saveCoachExchange } from "@/lib/coach-history"
 import prisma from "@/lib/prisma"
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   const session = await getAuthSession()
   if (!session?.user?.id) return NextResponse.json({error:"Logga in först."},{status:401})
-  return NextResponse.json({ messages: await readCoachHistory(session.user.id) }, { headers: { "Cache-Control": "no-store" } })
+  const all = await readCoachHistory(session.user.id)
+  const current = await readCoachHistory(session.user.id, new Date(session.loginAt ?? Date.now()))
+  return NextResponse.json({ messages: req.nextUrl.searchParams.get("history") === "all" ? all : current, hasHistory: all.length > 0 }, { headers: { "Cache-Control": "no-store" } })
 }
 
 export async function DELETE() {
@@ -27,7 +29,8 @@ export async function POST(req: NextRequest) {
   }
   const context = await getCoachContext()
   if (!context) return NextResponse.json({error:"Logga in först."},{status:401})
-  const reply = await getCoachReply(body.message,context)
+  const history = await readCoachHistory(session.user.id, new Date(session.loginAt ?? Date.now()))
+  const reply = await getCoachReply(body.message,context,history.slice(-12))
   try {
     await saveCoachExchange(session.user.id, body.message.trim(), reply)
     return NextResponse.json({ reply, saved: true })

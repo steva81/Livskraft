@@ -1,4 +1,12 @@
 "use client"
+import * as Dialog from "@radix-ui/react-dialog"
+import { translate } from "@/lib/i18n/catalog"
+import { ingredientEnglish } from "@/lib/i18n/ingredients"
+import { Localize, useLanguage } from "@/lib/i18n/provider"
+
+import { SlotChoices } from "@/components/planning-preferences"
+import { mealSlots } from "@/lib/preferences"
+import { type ShoppingFilter } from "@/lib/shopping-filters"
 import { displayValue } from "@/lib/display"
 import { clarifyPortionIngredient } from "@/lib/shopping"
 import { useEffect, useState } from "react"
@@ -10,17 +18,25 @@ import { getRecommendedRecipes, getUser, getShoppingListState, setShoppingItemCh
 import type { PublicUser } from "@/app/actions"
 import type { Recipe } from "@prisma/client"
 
+const shoppingLabel=(item:string)=>item.replace(/ \(till \d+ receptportion(?:er)?\)$/,"")
+
 type NutritionData = { calories: number; protein: number; carbs: number; fat: number }
 
 export default function MealsPage() {
   const { userId, sessionStatus } = useMode()
-  if (sessionStatus === "loading") return <p>Laddar dina recept…</p>
-  if (!userId) return <p>Logga in för att se dina recept.</p>
-  return <UserMealsPage key={userId} />
+  if (sessionStatus === "loading") return <Localize>{<p>Laddar dina recept…</p>}</Localize>
+  if (!userId) return <Localize>{<p>Logga in för att se dina recept.</p>}</Localize>
+  return <Localize key={userId}>{<UserMealsPage key={userId} />}</Localize>
 }
 
 function UserMealsPage() {
+  const {language}=useLanguage()
   const { mode, userId, sessionStatus } = useMode()
+  const [tab,setTab]=useState("recipes")
+  const [limit,setLimit]=useState(4)
+  const [mealFilter,setMealFilter]=useState("all")
+  const [filter,setFilter]=useState<ShoppingFilter>({period:"week",slots:[...mealSlots]})
+  const [days,setDays]=useState<{id:string;date:Date}[]>([])
   const [shoppingList, setShoppingList] = useState<string[]>([])
   const [planId, setPlanId] = useState<string | null>(null)
   const [checked, setChecked] = useState<string[]>([])
@@ -50,6 +66,8 @@ function UserMealsPage() {
       if (!active) return
       setUser(u)
       setRecipes(rec)
+      setOpenId(new URLSearchParams(window.location.search).get("recipe"))
+      setDays(shopping.days)
       setShoppingList(shopping.items)
       setPlanId(shopping.planId)
       setChecked(shopping.checked)
@@ -59,17 +77,26 @@ function UserMealsPage() {
     return () => { active = false }
   }, [userId, sessionStatus])
 
+  useEffect(()=>{
+    if (!loadedUserId) return
+    let active=true
+    setSaving(true)
+    getShoppingListState(filter).then(shopping=>{if(active){setShoppingList(shopping.items);setChecked(shopping.checked);setPlanId(shopping.planId);setDays(shopping.days);setError("")}}).catch(()=>{if(active)setError("Kunde inte läsa inköpslistan.")}).finally(()=>{if(active)setSaving(false)})
+    return ()=>{active=false}
+  },[filter,loadedUserId])
+
+
   if (sessionStatus === "loading" || loading || (userId && loadedUserId !== userId)) {
-    return <div className="p-8 text-center text-muted-foreground">Laddar dina recept...</div>
+    return <Localize>{<div className="p-8 text-center text-muted-foreground">Laddar dina recept...</div>}</Localize>
   }
-  if (!userId) return <p>Logga in för att se dina recept.</p>
+  if (!userId) return <Localize>{<p>Logga in för att se dina recept.</p>}</Localize>
 
   const toggleItem = async (item: string, value: boolean) => {
     if (!planId || saving) return
     setSaving(true)
     setError("")
     try {
-      await setShoppingItemChecked(planId, item, value)
+      await setShoppingItemChecked(planId, item, value, filter)
       setChecked(previous => value ? [...previous.filter(row => row !== item), item] : previous.filter(row => row !== item))
     } catch { setError("Kunde inte spara markeringen. Försök igen eller ladda om listan.") }
     finally { setSaving(false) }
@@ -78,18 +105,20 @@ function UserMealsPage() {
   const restrictions: string[] = user?.dietRestrictions ? (JSON.parse(user.dietRestrictions) as string[]) : []
 
 
-  return (
+  return <Localize>{(
     <div className="max-w-4xl mx-auto space-y-6">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Recept</h1>
         <p className="text-muted-foreground">
           Recept som passerar dina hårda kostregler
-          {restrictions.length > 0 && ` (${restrictions.map(displayValue).join(", ")})`}
+          {restrictions.length > 0 && ` (${restrictions.map(value=>translate(displayValue(value),language)).join(", ")})`}
         </p>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-3">
-        <div className="xl:col-span-2 space-y-4">
+      <div role="group" aria-label="Recept och inköp" className="flex gap-2"><Button variant={tab==="recipes"?"default":"outline"} aria-pressed={tab==="recipes"} onClick={()=>setTab("recipes")}>Receptförslag</Button><Button variant={tab==="shopping"?"default":"outline"} aria-pressed={tab==="shopping"} onClick={()=>{setTab("shopping");setOpenId(null)}}>Inköpslista</Button></div>
+      <div className="space-y-6">
+        {tab==="recipes" && <div className="space-y-4">
+          <label className="block text-sm">Måltid<select className="border rounded p-2 ml-2" value={mealFilter} onChange={e=>{setMealFilter(e.target.value);setLimit(4)}}>{Object.entries({all:"Alla",breakfast:"Frukost",lunch:"Lunch",dinner:"Middag",snack:"Mellanmål"}).map(([key,label])=><option key={key} value={key}>{label}</option>)}</select></label>
           <h2 className="text-xl font-semibold">Dina Receptförslag</h2>
           {recipes.length === 0 ? (
             <Card>
@@ -98,14 +127,14 @@ function UserMealsPage() {
               </CardContent>
             </Card>
           ) : (
-            recipes.map((recipe) => {
+            recipes.filter(r=>openId ? r.id===openId : mealFilter==="all"||JSON.parse(r.tags??"[]").includes(mealFilter)).slice(0,limit).map((recipe) => {
               const nutrition = JSON.parse(recipe.nutrition ?? "{}") as NutritionData
               const tags = JSON.parse(recipe.tags ?? "[]") as string[]
               const ingredients = JSON.parse(recipe.ingredients ?? "[]") as string[]
               const instructions = JSON.parse(recipe.instructions ?? "[]") as string[]
               const open = openId === recipe.id
-              return (
-                <Card key={recipe.id}>
+              return <Localize key={recipe.id}>{(
+                <Card id={`recipe-${recipe.id}`} key={recipe.id} className="scroll-mt-20">
                   <CardHeader className="pb-3">
                     <CardTitle>{recipe.title}</CardTitle>
                     <CardDescription>{recipe.description}</CardDescription>
@@ -116,11 +145,12 @@ function UserMealsPage() {
                         <Clock className="w-4 h-4" /> {recipe.prepTime} min
                       </span>
                       {tags.map((tag) => (
-                        <span key={displayValue(tag)} className="bg-secondary text-secondary-foreground px-2 py-0.5 rounded-md text-xs">
+                        <span key={tag} className="bg-secondary text-secondary-foreground px-2 py-0.5 rounded-md text-xs">
                           {displayValue(tag)}
                         </span>
                       ))}
                     </div>
+                    <Dialog.Root open={open} onOpenChange={value=>{if(!value){setOpenId(null);window.history.replaceState(null,"","/meals")}}}><Dialog.Portal><Dialog.Overlay className="fixed inset-0 z-50 bg-black/50"/><Dialog.Content className="fixed z-50 inset-x-4 top-[5dvh] mx-auto max-w-2xl max-h-[90dvh] overflow-y-auto rounded-xl bg-white p-5 space-y-4"><Dialog.Title className="text-xl font-semibold">{recipe.title}</Dialog.Title><Dialog.Description>1 receptportion. Tillagningstid: {recipe.prepTime} min.</Dialog.Description><Dialog.Close className="border rounded px-4 min-h-11">Stäng recept</Dialog.Close><p className="text-sm">{tags.map(tag=>translate(displayValue(tag),language)).join(" · ")}</p>
                     {mode === "advanced" && (
                       <div className="bg-gray-50 p-3 rounded-md text-xs text-gray-600 mb-4 flex flex-wrap gap-4">
                         <span>Näringsvärden per receptportion</span>
@@ -138,13 +168,12 @@ function UserMealsPage() {
                         </span>
                       </div>
                     )}
-                    {open && (
                       <div className="mb-4 space-y-3 text-sm">
                         <div>
                           <p className="font-medium mb-1">Ingredienser · 1 receptportion</p>
                           <ul className="list-disc pl-5 space-y-1">
                             {ingredients.map((item) => (
-                              <li key={item}>{clarifyPortionIngredient(item)}</li>
+                              <li key={item}>{language==="en"?ingredientEnglish(clarifyPortionIngredient(item)):clarifyPortionIngredient(item)}</li>
                             ))}
                           </ul>
                         </div>
@@ -157,27 +186,34 @@ function UserMealsPage() {
                           </ol>
                         </div>
                       </div>
-                    )}
+                    </Dialog.Content></Dialog.Portal></Dialog.Root>
                     <Button variant="outline" className="w-full sm:w-auto" onClick={() => setOpenId(open ? null : recipe.id)}>
                       {open ? "Dölj recept" : "Visa recept"}
                     </Button>
                   </CardContent>
                 </Card>
-              )
+              )}</Localize>
             })
           )}
-        </div>
+          {!openId && limit<recipes.filter(r=>mealFilter==="all"||JSON.parse(r.tags??"[]").includes(mealFilter)).length && <Button variant="outline" onClick={()=>setLimit(n=>n+4)}>Visa fler recept</Button>}
+        </div>}
 
-        <div>
+        {tab==="shopping" && <div>
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <ShoppingCart className="w-5 h-5 text-primary" />
                 Inköpslista
               </CardTitle>
-              <CardDescription>Måndag–söndag, en receptportion per planerad måltid. Samma ingrediens och enhet summeras.</CardDescription>
+              <CardDescription>Endast dina valda måltider, en receptportion per måltid. Perioder räknas inom den aktuella veckoplanen.</CardDescription>
             </CardHeader>
             <CardContent>
+              <div className="space-y-3 mb-4">
+                <label className="block text-sm">Handla för<select className="w-full border rounded p-2" value={filter.period} onChange={e=>setFilter({...filter,period:e.target.value as ShoppingFilter["period"],dayIds:[]})}>{Object.entries({today:"Idag","2":"Nästa 2 dagar","3":"Nästa 3 dagar",week:"Hela veckan",custom:"Välj dagar själv"}).map(([key,label])=><option key={key} value={key}>{label}</option>)}</select></label>
+                {filter.period==="custom" && <div>{days.map(day=><label key={day.id} className="flex items-center gap-2 min-h-11 text-sm"><input type="checkbox" checked={filter.dayIds?.includes(day.id)??false} onChange={e=>setFilter({...filter,dayIds:e.target.checked?[...(filter.dayIds??[]),day.id]:(filter.dayIds??[]).filter(id=>id!==day.id)})}/>{new Date(day.date).toLocaleDateString(language==="en"?"en-GB":"sv-SE",{weekday:"long",day:"numeric",month:"short"})}</label>)}</div>}
+                <fieldset><legend className="text-sm">Måltider att handla för</legend><SlotChoices value={filter.slots??[...mealSlots]} onChange={slots=>setFilter({...filter,slots})}/></fieldset>
+                <label className="flex items-center min-h-11 gap-2 text-sm"><input type="checkbox" checked={filter.hidePantry??false} onChange={e=>setFilter({...filter,hidePantry:e.target.checked})}/>Dölj basvaror (kontrollera vad du har hemma)</label>
+              </div>
               <p className="text-xs text-muted-foreground mb-3">Buljong avser färdigblandad vätska. Väljer du tärning eller koncentrat, följ förpackningens dosering och allergenmärkning.</p>
               <p className="text-xs text-muted-foreground mb-3">Markeringarna sparas för din veckoplan. Om mängden på en rad ändras behöver du markera den igen.</p>
               {error && <p role="alert" className="text-sm text-red-700 mb-3">{error}</p>}
@@ -188,8 +224,8 @@ function UserMealsPage() {
                   {shoppingList.map((item) => (
                     <li key={item} className="text-sm">
                       <label className="flex min-h-11 cursor-pointer items-start gap-3 py-2">
-                        <input type="checkbox" aria-label={item} checked={checked.includes(item)} disabled={saving || !planId} onChange={event => toggleItem(item, event.target.checked)} className="mt-0.5 h-5 w-5 shrink-0" />
-                        <span className="min-w-0 break-words">{item}</span>
+                        <input type="checkbox" aria-label={language==="en"?ingredientEnglish(shoppingLabel(item)):shoppingLabel(item)} checked={checked.includes(item)} disabled={saving || !planId} onChange={event => toggleItem(item, event.target.checked)} className="mt-0.5 h-5 w-5 shrink-0" />
+                        <span className="min-w-0 break-words">{language==="en"?ingredientEnglish(shoppingLabel(item)):shoppingLabel(item)}</span>
                       </label>
                     </li>
                   ))}
@@ -197,8 +233,8 @@ function UserMealsPage() {
               )}
             </CardContent>
           </Card>
-        </div>
+        </div>}
       </div>
     </div>
-  )
+  )}</Localize>
 }

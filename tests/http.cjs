@@ -3,7 +3,7 @@ const { PrismaClient } = require('@prisma/client')
 require('ts-node').register({ transpileOnly:true, compilerOptions:{module:'CommonJS',moduleResolution:'node'} })
 const { hashPassword } = require('../src/lib/password')
 const prisma = new PrismaClient()
-const base = 'http://localhost:3000'
+const base = process.env.TEST_BASE_URL || 'http://localhost:3000'
 const ids = []
 function client() {
   const cookies = new Map()
@@ -15,7 +15,7 @@ function client() {
 }
 async function main() {
   const anonymous=client()
-  for(const route of ['/dashboard','/plan','/meals','/training','/progress','/coach','/profile']) {
+  for(const route of ['/my-plan','/account','/dashboard','/plan','/meals','/training','/progress','/coach','/profile']) {
     const response=await anonymous(route)
     assert.equal(response.status,307)
     assert(response.headers.get('location').includes('/login'))
@@ -42,14 +42,33 @@ async function main() {
     assert.equal((await request('/api/coach',{method:'POST',body:'invalid json'})).status,400)
     const stepsReply=await (await request('/api/coach',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({message:'mina steg'})})).json()
     assert(stepsReply.reply.includes(steps.toLocaleString('sv-SE')))
+    const language=name==='TestAlpha'?'en':'sv'
+    await prisma.user.update({where:{id:user.id},data:{preferences:JSON.stringify({language,health:'type1',workSchedule:'kvall',budget:'high'})}})
     const signoutCsrf=await (await request('/api/auth/csrf')).json()
     await request('/api/auth/signout',{method:'POST',headers:{'content-type':'application/x-www-form-urlencoded'},body:new URLSearchParams({csrfToken:signoutCsrf.csrfToken,json:'true'})})
     assert(!(await (await request('/api/auth/session')).json()).user)
     const freshCsrf=await (await request('/api/auth/csrf')).json()
     await request('/api/auth/callback/credentials',{method:'POST',headers:{'content-type':'application/x-www-form-urlencoded'},body:new URLSearchParams({csrfToken:freshCsrf.csrfToken,email,password:'local-test-12345',json:'true'})})
     assert.equal((await (await request('/api/auth/session')).json()).user.id,user.id)
+    assert.equal((await (await request('/api/coach')).json()).messages.length,0)
+    const archive=await (await request('/api/coach?history=all')).json()
+    assert(archive.messages.some(m=>m.text.includes(name)))
+    assert(!archive.messages.some(m=>m.text.includes(name==='TestAlpha'?'TestBeta':'TestAlpha')))
     const after=await (await request('/api/coach',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({message:'mina steg'})})).json()
-    assert(after.reply.includes(steps.toLocaleString('sv-SE')))
+    assert(after.reply.includes(steps.toLocaleString(language==='en'?'en-GB':'sv-SE')))
+    if(language==='en') assert(after.reply.includes('steps'))
+    else assert(after.reply.includes('steg'))
+    const saved=JSON.parse((await prisma.user.findUnique({where:{id:user.id}})).preferences)
+    assert.equal(saved.language,language)
+    assert.equal(saved.health,'type1')
+    assert.equal(saved.workSchedule,'kvall')
+    assert.equal(saved.budget,'high')
+    assert((await (await request('/api/coach')).json()).messages.length>=2)
+    await request('/api/coach',{method:'DELETE'})
+    assert.equal((await (await request('/api/coach?history=all')).json()).messages.length,0)
+    await prisma.user.update({where:{id:user.id},data:{password:await hashPassword('rotated-test-password')}})
+    assert(!(await (await request('/api/auth/session')).json()).user?.id)
+    assert.equal((await request('/api/coach')).status,401)
     console.log(`PASS ${name}: real NextAuth session, own coach context, page access and input validation`)
   }
 }

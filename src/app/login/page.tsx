@@ -1,4 +1,6 @@
 "use client"
+import { Localize, LanguageSelector } from "@/lib/i18n/provider"
+
 import { signIn } from "next-auth/react"
 import { useState, Suspense } from "react"
 import { Button } from "@/components/ui/button"
@@ -27,10 +29,11 @@ function LoginForm() {
     }
   }
 
-  return (
+  return <Localize>{(
     <div className="min-h-screen flex items-center justify-center p-4 bg-gray-50/50">
       <Card className="w-full max-w-sm">
         <CardHeader>
+          <LanguageSelector />
           <CardTitle className="text-2xl">Logga in</CardTitle>
           {justCreated && (
             <CardDescription className="text-green-700 bg-green-50 p-2 rounded-md mt-1">
@@ -82,13 +85,13 @@ function LoginForm() {
         </CardContent>
       </Card>
     </div>
-  )
+  )}</Localize>
 }
 
 export default function LoginPage() {
-  return (
+  return <Localize>{(
     <Suspense>
       <LoginForm />
     </Suspense>
-  )
+  )}</Localize>
 }

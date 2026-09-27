@@ -1,8 +1,8 @@
 import prisma from "./prisma"
 
-export async function readCoachHistory(userId: string) {
+export async function readCoachHistory(userId: string, since?: Date) {
   const rows = await prisma.coachExchange.findMany({
-    where: { userId }, orderBy: { id: "desc" }, take: 50,
+    where: { userId, ...(since ? {createdAt:{gte:since}} : {}) }, orderBy: { id: "desc" }, take: 50,
     select: { id: true, question: true, reply: true },
   })
   return rows.reverse().flatMap(row => [

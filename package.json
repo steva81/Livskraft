@@ -10,7 +10,10 @@
     "typecheck": "tsc --noEmit",
     "test:beta": "node tests/beta.cjs",
     "test:product": "node tests/product.cjs",
-    "test:http": "node tests/http.cjs"
+    "test:http": "node tests/http.cjs",
+    "test:goal-safety": "node tests/goal-safety.cjs",
+    "test:phase": "node tests/phase.cjs",
+    "test:refinement": "node tests/refinement.cjs"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",

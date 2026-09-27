@@ -1,4 +1,7 @@
 "use client"
+import { Localize, useLanguage } from "@/lib/i18n/provider"
+
+import { savedGoalSafety } from "@/lib/goal-safety"
 import { displayValue } from "@/lib/display"
 import { useEffect, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -12,6 +15,7 @@ import type { PlannedMeal } from "@/lib/plan-types"
 import Link from "next/link"
 
 export default function DashboardPage() {
+  const {language}=useLanguage()
   const { userId, sessionStatus } = useMode()
   const [user, setUser] = useState<PublicUser | null>(null)
   const [todayLog, setTodayLog] = useState<DailyLog | null>(null)
@@ -48,13 +52,14 @@ export default function DashboardPage() {
   }
 
   if (sessionStatus === "loading" || loading) {
-    return <div className="p-8 text-center text-muted-foreground">Laddar din dag...</div>
+    return <Localize>{<div className="p-8 text-center text-muted-foreground">Laddar din dag...</div>}</Localize>
   }
 
   if (!user || !todayLog) {
-    return <div className="p-8 text-center text-muted-foreground">Kunde inte ladda din dag. Logga in igen.</div>
+    return <Localize>{<div className="p-8 text-center text-muted-foreground">Kunde inte ladda din dag. Logga in igen.</div>}</Localize>
   }
 
+  const goalSafety = savedGoalSafety(user)
   const stepProgress = Math.min((todayLog.steps / user.stepGoal) * 100, 100)
   const eaten = (() => {
     try {
@@ -64,8 +69,9 @@ export default function DashboardPage() {
     }
   })()
 
-  return (
+  return <Localize>{(
     <div className="max-w-4xl mx-auto space-y-6">
+      {goalSafety?.message && <div role="alert" className="rounded bg-amber-50 p-3 text-sm text-amber-900"><p>{goalSafety.message}</p><Link href="/my-plan" className="underline">Ändra målet i Min plan</Link></div>}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Idag</h1>
@@ -89,7 +95,7 @@ export default function DashboardPage() {
             )}
             {meals.map((meal) => {
               const done = eaten.includes(`${meal.slot}:${meal.recipeId}`) || eaten.includes(meal.title)
-              return (
+              return <Localize key={`${meal.slot}-${meal.recipeId}`}>{(
                 <div key={`${meal.slot}-${meal.recipeId}`} className="flex items-start gap-4">
                   {done ? (
                     <CheckCircle2 className="h-6 w-6 text-primary shrink-0 mt-0.5" />
@@ -105,7 +111,7 @@ export default function DashboardPage() {
                     </p>
                   </div>
                 </div>
-              )
+              )}</Localize>
             })}
           </CardContent>
         </Card>
@@ -116,11 +122,11 @@ export default function DashboardPage() {
               <Footprints className="h-5 w-5 text-primary" />
               Rörelse
             </CardTitle>
-            <CardDescription>Dagligt mål: {user.stepGoal.toLocaleString("sv-SE")} steg</CardDescription>
+            <CardDescription>Dagligt mål: {user.stepGoal.toLocaleString(language==="en"?"en-GB":"sv-SE")} steg</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="flex flex-col items-center py-4">
-              <div className="text-4xl font-bold text-primary mb-2">{todayLog.steps.toLocaleString("sv-SE")}</div>
+              <div className="text-4xl font-bold text-primary mb-2">{todayLog.steps.toLocaleString(language==="en"?"en-GB":"sv-SE")}</div>
               <p className="text-sm text-muted-foreground mb-4">steg hittills</p>
               <div className="w-full bg-gray-100 rounded-full h-2.5 mb-2">
                 <div className="bg-primary h-2.5 rounded-full transition-all" style={{ width: `${stepProgress}%` }} />
@@ -166,5 +172,5 @@ export default function DashboardPage() {
         </Card>
       </div>
     </div>
-  )
+  )}</Localize>
 }

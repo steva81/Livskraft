@@ -1,5 +1,6 @@
+import { mealSlots, validSlots, type MealSlot } from "./preferences"
 export type PlannedMeal = {
-  slot: "Frukost" | "Lunch" | "Middag"
+  slot: MealSlot
   recipeId: string
   title: string
 }
@@ -15,7 +16,8 @@ export function startOfWeekMonday(from = new Date()): Date {
 
 export function parsePlannedMeals(raw: string): PlannedMeal[] {
   try {
-    const parsed = JSON.parse(raw) as unknown
+    const value = JSON.parse(raw)
+    const parsed: unknown = Array.isArray(value) ? value : value?.meals
     if (!Array.isArray(parsed)) return []
     return parsed.map((item, index) => {
       if (typeof item === "string") {
@@ -32,4 +34,12 @@ export function parsePlannedMeals(raw: string): PlannedMeal[] {
   } catch {
     return []
   }
+}
+
+export function selectedSlots(raw: string): MealSlot[] {
+  try { const value = JSON.parse(raw); if (validSlots(value?.selectedSlots)) return value.selectedSlots } catch { /* legacy */ }
+  return mealSlots.filter(slot => parsePlannedMeals(raw).some(meal => meal.slot === slot))
+}
+export function encodeMeals(meals: PlannedMeal[], slots: MealSlot[]): string {
+  return JSON.stringify({ version: 1, selectedSlots: slots, meals })
 }

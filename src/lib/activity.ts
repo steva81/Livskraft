@@ -23,5 +23,32 @@ export function activityGuidance(input: { index: number; training: boolean; step
   if (lowSteps && index === 0) text += " De senaste loggarna visar färre steg: prova en kort rörelsepaus i en befintlig vardagsrutin, utan att ta igen missade steg."
   else if (lifestyle.includes("family") && index % 3 === 0) text += " Ta gärna med familjen."
   else if (lifestyle.includes("travels") && index % 3 === 1) text += " På resdagar kan en kort paus mellan färdsträckor räcka."
+  if (preferences.workSchedule === "kvall") text += " Kvällsarbete: lägg gärna träning och huvudmåltid före jobbet, ta med en praktisk måltid under passet och ät efteråt om du är hungrig."
+  if (preferences.language === "en") {
+    const timingEn=preferences.workSchedule!=="dagtid" ? "around your waking hours" : lifestyle.includes("office-worker") ? "during a lunch break" : "in the evening"
+    const choices=training ? [
+      `An optional gentle walk of about ${minutes} minutes ${timingEn}. The strength workout is today's training.`,
+      "Training day: keep everyday movement light. A short outdoor break is an option.",
+      "Your journey to or from the workout can provide some everyday movement. No extra workout is needed.",
+      "Break up a long period of sitting by standing and moving briefly. Rest after your workout when needed.",
+      "Choose light movement between daily tasks. Strength training is enough for today.",
+      "Some fresh air may feel good after training. Choose whether and when it suits you.",
+      "End the week at your own pace. Leave room for recovery and everyday movement."
+    ] : [
+      `Rest day from strength training: consider a gentle walk of about ${minutes} minutes ${timingEn}.`,
+      `Choose a comfortable route ${timingEn}. You can split about ${minutes} minutes into two shorter walks.`,
+      "Take a movement break between daily activities at a comfortable pace.",
+      "If practical, walk part of an errand. Choose a manageable distance.",
+      "Consider replacing some sitting with light movement at home. It does not need to be a workout.",
+      "Choose something you enjoy outdoors, alone or with company. A short break is enough to start.",
+      "Make room for recovery. A gentle walk or movement at home are optional today."
+    ]
+    let result=choices[index%7]
+    if(lowSteps && index===0) result+=" Recent logs show fewer steps: try a short movement break in an existing routine, without making up missed steps."
+    else if(lifestyle.includes("family") && index%3===0) result+=" Invite your family if you like."
+    else if(lifestyle.includes("travels") && index%3===1) result+=" On travel days, a short break between journeys may be enough."
+    if(preferences.workSchedule==="kvall") result+=" Evening work: consider training and your main meal before work, practical food during the shift and a later meal if hungry."
+    return result
+  }
   return text
 }

@@ -3,6 +3,10 @@
  * Restrictions and allergies always win over tags, suggestions and substitutions.
  */
 
+
+const foodAliases: Record<string,string> = { nuts:"nötter", peanuts:"jordnötter", milk:"mjölk", eggs:"ägg", egg:"ägg", soy:"soja", sesame:"sesam", fish:"fisk", shellfish:"skaldjur", celery:"selleri", mustard:"senap", lupin:"lupin", sulphites:"sulfiter", sulfites:"sulfiter", mushrooms:"svamp", mushroom:"svamp", liver:"lever", chicken:"kyckling", salmon:"lax", beef:"nötkött", pork:"fläsk", dairy:"mjölk", tofu:"tofu", lentils:"linser", beans:"bönor", oats:"havregryn", rice:"ris" }
+export function canonicalFoodTerm(value:string):string { const key=value.trim().toLowerCase(); return foodAliases[key]??key }
+
 export type RecipeLike = {
   tags: string
   ingredients: string
@@ -81,7 +85,7 @@ function hasRegularDairy(ingredients: string[]): boolean {
   return ingredients.some((item) => {
     const n = normalize(item)
     if (isLactoseFreeIngredient(n)) return false
-    return DAIRY.some((d) => n.includes(d))
+    return DAIRY.some((d) => n.replaceAll("jordnötssmör", "").includes(d))
   })
 }
 
@@ -111,7 +115,7 @@ export function recipeMeetsConstraints(
   for (const restriction of restrictions) {
     const r = restriction.toLowerCase().replaceAll("_", "-")
     if (r.startsWith("allergy:")) {
-      const words = allergyWords[r.slice(8)]
+      const words = allergyWords[canonicalFoodTerm(r.slice(8))]
       if (!words || containsAny(blob, words)) return false
       continue
     }
@@ -128,7 +132,7 @@ export function recipeMeetsConstraints(
 
     if (r === "vegan") {
       if (!tags.includes("vegan")) return false
-      if (containsAny(blob, MEAT_FISH) || containsAny(blob, ANIMAL_NON_MEAT) || containsAny(blob, DAIRY)) {
+      if (containsAny(blob, MEAT_FISH) || containsAny(blob, ANIMAL_NON_MEAT) || containsAny(blob.replaceAll("jordnötssmör", ""), DAIRY)) {
         return false
       }
       if (tags.includes("vegetarian") && hasRegularDairy(ingredients)) return false
@@ -147,7 +151,7 @@ export function recipeMeetsConstraints(
   }
 
   for (const dislike of dislikes) {
-    const d = dislike.toLowerCase().trim()
+    const d = canonicalFoodTerm(dislike).trim()
     if (!d) continue
 
     const nutAllergy = d.includes("nöt")

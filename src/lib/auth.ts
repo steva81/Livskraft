@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto"
 import type { NextAuthOptions } from "next-auth"
 import CredentialsProvider from "next-auth/providers/credentials"
 import { getServerSession } from "next-auth"
@@ -40,12 +41,21 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id
+        token.loginAt = Date.now()
+        const record = await prisma.user.findUnique({where:{id:user.id}})
+        token.credentialVersion = createHash("sha256").update(record?.password ?? "").digest("hex")
+      }
+      if (!token.credentialVersion) token.id = ""
+      if (token.id && token.credentialVersion) {
+        const record = await prisma.user.findUnique({where:{id:token.id}})
+        if (!record || createHash("sha256").update(record.password ?? "").digest("hex") !== token.credentialVersion) token.id = ""
       }
       return token
     },
     async session({ session, token }) {
       if (session.user) {
-        session.user.id = (typeof token.id === "string" && token.id) || token.sub || ""
+        session.user.id = typeof token.id === "string" ? token.id : token.sub || ""
+        session.loginAt = token.loginAt
       }
       return session
     },

@@ -1,18 +1,22 @@
 "use client"
+import { Localize, LanguageSelector, useLanguage } from "@/lib/i18n/provider"
+
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { submitOnboarding } from "@/app/actions"
 import { defaultPreferences } from "@/lib/preferences"
+import { assessGoal, timeframeOptions } from "@/lib/goal-safety"
 import { signIn } from "next-auth/react"
 
 export default function OnboardingPage() {
+  const {language}=useLanguage()
   const router = useRouter()
   const [step, setStep] = useState(1)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
-  const [warning, setWarning] = useState("")
+  const [showGoalErrors, setShowGoalErrors] = useState(false)
 
   const [formData, setFormData] = useState({
     name: "",
@@ -46,19 +50,11 @@ export default function OnboardingPage() {
     })
   }
 
+  const safety = assessGoal(formData)
+  const warning = (showGoalErrors || (formData.currentWeight && formData.targetWeight)) ? safety.message : ""
   const checkSafety = () => {
-    const cw = parseFloat(formData.currentWeight)
-    const tw = parseFloat(formData.targetWeight)
-    const wks = parseInt(formData.timeframeWeeks)
-    if (cw && tw && wks) {
-      const diff = cw - tw
-      if (diff > 0 && (diff / wks) > 1.0) {
-        setWarning(`Målet är för snabbt för denna beta. Välj minst ${Math.ceil(diff)} veckor, gärna längre. Vi planerar inte extrem begränsning eller kompensation.`)
-        return false
-      }
-    }
-    setWarning("")
-    return true
+    setShowGoalErrors(true)
+    return safety.level !== "blocked"
   }
 
   const handleComplete = async () => {
@@ -73,6 +69,7 @@ export default function OnboardingPage() {
     setError("")
     const dataToSubmit = {
       ...formData,
+      preferences:{...formData.preferences,language,dailySteps:({sedentary:4000,light:5500,moderate:7000,active:9000} as Record<string,number>)[formData.activityLevel]??5000},
       dietRestrictions: [...formData.dietRestrictions, ...formData.allergies.split(",").map(s => s.trim().toLowerCase()).filter(Boolean).map(s => `allergy:${s}`)],
       dislikedFoods: formData.dislikedFoods.split(",").map((s) => s.trim()).filter(Boolean),
     }
@@ -88,7 +85,7 @@ export default function OnboardingPage() {
       if (login?.error) {
         router.push("/login?created=1")
       } else {
-        router.push("/dashboard")
+        router.push("/my-plan?welcome=1")
       }
     } else {
       setError(res.error || "Kunde inte skapa kontot.")
@@ -96,10 +93,11 @@ export default function OnboardingPage() {
     } catch { setError("Kunde inte skapa kontot. Försök igen.") } finally { setLoading(false) }
   }
 
-  return (
+  return <Localize>{(
     <div className="min-h-screen flex items-center justify-center p-4 bg-gray-50/50">
       <Card className="w-full max-w-2xl">
         <CardHeader>
+          <LanguageSelector />
           <CardTitle>Steg {step} av 4: Välkommen till Livskraft</CardTitle>
           <CardDescription>Vi bygger en plan som anpassar sig efter ditt liv.</CardDescription>
         </CardHeader>
@@ -131,16 +129,13 @@ export default function OnboardingPage() {
                 </div>
               </div>
               <div>
-                <label className="text-sm font-medium leading-none">Önskad tidsram (veckor)</label>
-                <select aria-label="Önskad tidsram (veckor)" className="w-full p-2 border rounded-md mt-1" value={formData.timeframeWeeks} onChange={e => setFormData({...formData, timeframeWeeks: e.target.value})}>
-                  <option value="4">4 veckor</option>
-                  <option value="8">8 veckor</option>
-                  <option value="12">12 veckor</option>
-                  <option value="24">24 veckor</option><option value="52">52 veckor</option><option value="104">104 veckor</option>
+                <label className="text-sm font-medium leading-none">Önskad tidsram</label>
+                <select aria-label="Önskad tidsram" className="w-full p-2 border rounded-md mt-1" value={formData.timeframeWeeks} onChange={e => setFormData({...formData, timeframeWeeks: e.target.value})}>
+                  {timeframeOptions.map(option => <option key={option.weeks} value={option.weeks}>{option.label}</option>)}
                 </select>
               </div>
-              <div className="grid grid-cols-2 gap-4">{(["height", "waist"] as const).map(key => <label key={key} className="text-sm">{key === "height" ? "Längd (cm)" : "Midjemått (cm, valfritt)"}<input type="number" className="w-full border rounded p-2" value={formData[key]} onChange={e => setFormData({...formData, [key]: e.target.value})} /></label>)}</div>
-              {warning && <div className="p-3 bg-red-50 text-red-700 text-sm rounded-md">{warning}</div>}
+              <div className="grid grid-cols-2 gap-4">{(["height"] as const).map(key => <label key={key} className="text-sm">{key === "height" ? "Längd (cm)" : "Midjemått (cm, valfritt)"}<input type="number" className="w-full border rounded p-2" value={formData[key]} onChange={e => setFormData({...formData, [key]: e.target.value})} /></label>)}</div>
+              {warning && <div role="alert" className="p-3 bg-amber-50 text-amber-900 text-sm rounded-md">{warning}</div>}
               <Button onClick={() => { if(checkSafety()) handleNext() }} className="w-full">Nästa</Button>
             </div>
           )}
@@ -159,12 +154,7 @@ export default function OnboardingPage() {
                 ))}
               </div>
 
-              <div>
-                <label className="text-sm font-medium leading-none">Mat du ogillar (separera med komma)</label>
-                <input type="text" className="w-full p-2 border rounded-md mt-1" value={formData.dislikedFoods} onChange={e => setFormData({...formData, dislikedFoods: e.target.value})} placeholder="T.ex: nötter, svamp, lever" />
-              </div>
-
-              {step === 2 && <><label className="block text-sm">Allergier (komma mellan, t.ex. nötter, mjölk, ägg, soja)<input className="w-full border rounded p-2" value={formData.allergies} onChange={e => setFormData({...formData, allergies: e.target.value})} /></label><p className="text-xs text-muted-foreground">Okända allergier och kostkrav utan verifierade recept ger en tom matplan. Kontrollera alltid märkningen på de produkter du använder.</p><label className="block text-sm">Mat du gillar<input className="w-full border rounded p-2" value={formData.preferences.likedFoods} onChange={e => setFormData({...formData, preferences: {...formData.preferences, likedFoods: e.target.value}})} /></label></>}
+              {step === 2 && <><label className="block text-sm">Allergier (komma mellan, t.ex. nötter, mjölk, ägg, soja)<input className="w-full border rounded p-2" value={formData.allergies} onChange={e => setFormData({...formData, allergies: e.target.value})} /></label><p className="text-xs text-muted-foreground">Okända allergier och kostkrav utan verifierade recept ger en tom matplan. Kontrollera alltid märkningen på de produkter du använder.</p></>}
               <div className="flex gap-2">
                 <Button variant="outline" onClick={handleBack} className="w-full">Tillbaka</Button>
                 <Button onClick={handleNext} className="w-full">Nästa</Button>
@@ -175,23 +165,6 @@ export default function OnboardingPage() {
           {step === 3 && (
             <div className="space-y-4">
               <h3 className="text-lg font-medium">Livsstil och vardag</h3>
-              <div className="space-y-2">
-                {[
-                  { id: "office-worker", label: "Stillasittande arbete" },
-                  { id: "active-job", label: "Fysiskt aktivt arbete" },
-                  { id: "travels", label: "Reser mycket i jobbet" },
-                  { id: "family", label: "Familj / Barn" },
-                  { id: "no-microwave", label: "Saknar mikrovågsugn på jobbet" },
-                  { id: "no-fridge", label: "Saknar kylskåp" },
-                  { id: "meal-prep", label: "Kan förbereda matlådor" }
-                ].map(ls => (
-                  <label key={ls.id} className="flex min-h-11 sm:min-h-0 cursor-pointer items-center gap-2">
-                    <input type="checkbox" checked={formData.lifestyle.includes(ls.id)} onChange={() => handleCheckbox("lifestyle", ls.id)} />
-                    <span>{ls.label}</span>
-                  </label>
-                ))}
-              </div>
-              
               <div>
                 <label className="text-sm font-medium leading-none">Allmän aktivitetsnivå</label>
                 <select aria-label="Allmän aktivitetsnivå" className="w-full p-2 border rounded-md mt-1" value={formData.activityLevel} onChange={e => setFormData({...formData, activityLevel: e.target.value})}>
@@ -202,14 +175,6 @@ export default function OnboardingPage() {
                 </select>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                {([{key: "dailySteps", label: "Ungefärliga steg per dag", min: 0, max: 50000}, {key: "cookingMinutes", label: "Tid för matlagning (min)", min: 5, max: 180}, {key: "trainingDays", label: "Realistiska träningsdagar/vecka", min: 0, max: 5}, {key: "workoutMinutes", label: "Tid per pass (min)", min: 10, max: 120}] as const).map(field => <label key={field.key} className="text-sm">{field.label}<input type="number" min={field.min} max={field.max} className="w-full border rounded p-2" value={formData.preferences[field.key]} onChange={e => setFormData({...formData, preferences: {...formData.preferences, [field.key]: Number(e.target.value)}})} /></label>)}
-              </div>
-              <label className="block text-sm">Arbetstider<select className="w-full border rounded p-2" value={formData.preferences.workSchedule} onChange={e => setFormData({...formData, preferences: {...formData.preferences, workSchedule: e.target.value}})}><option value="dagtid">Dagtid</option><option value="skift">Skift / oregelbundet</option><option value="natt">Natt</option></select></label>
-              <label className="block text-sm">Matbudget<select className="w-full border rounded p-2" value={formData.preferences.budget} onChange={e => setFormData({...formData, preferences: {...formData.preferences, budget: e.target.value}})}><option value="normal">Normal</option><option value="low">Låg</option></select></label>
-              <label className="block text-sm">Utrustning hemma<input className="w-full border rounded p-2" value={formData.preferences.equipment} onChange={e => setFormData({...formData, preferences: {...formData.preferences, equipment: e.target.value}})} /></label>
-              <p className="text-xs text-muted-foreground">Skriv utrustning du har, separerad med komma, till exempel kroppsvikt, hantlar, bänk. Valet gäller hemmapass. Gym innebär vanliga gymmaskiner och fria vikter. Kroppsviktspass kan använda golv och vägg.</p>
-              <label className="block text-sm">Övriga kroppsmått (valfritt)<input className="w-full border rounded p-2" value={formData.preferences.measurements} onChange={e => setFormData({...formData, preferences: {...formData.preferences, measurements: e.target.value}})} /></label>
               <div>
                 <label className="text-sm font-medium leading-none">Var vill du träna?</label>
                 <select aria-label="Var vill du träna?" className="w-full p-2 border rounded-md mt-1" value={formData.trainingLocation} onChange={e => setFormData({...formData, trainingLocation: e.target.value})}>
@@ -269,5 +234,5 @@ export default function OnboardingPage() {
         </CardContent>
       </Card>
     </div>
-  )
+  )}</Localize>
 }

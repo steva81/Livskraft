@@ -1,10 +1,14 @@
-import type { Recipe, Workout } from "@prisma/client"
+import type { Workout } from "@prisma/client"
 import prisma from "@/lib/prisma"
 import { parseStringList, recipeMeetsConstraints } from "@/lib/dietary"
 import { type PlannedMeal, startOfWeekMonday } from "@/lib/plan-types"
+import { chooseMeals, rankRecipes } from "./recipe-ranking"
+import { encodeMeals } from "./plan-types"
 import { readPreferences } from "./preferences"
 import { workoutFits } from "./training"
 import { activityGuidance } from "./activity"
+
+import { savedGoalSafety } from "./goal-safety"
 
 export type { PlannedMeal }
 export { startOfWeekMonday, parsePlannedMeals } from "@/lib/plan-types"
@@ -15,21 +19,10 @@ function addDays(date: Date, days: number): Date {
   return next
 }
 
-function pickRotating<T>(items: T[], index: number, fallback: T): T {
-  if (items.length === 0) return fallback
-  return items[index % items.length]
-}
-
-function slotRecipes(recipes: Recipe[], tag: string): Recipe[] {
-  return recipes.filter((r) => {
-    const tags = parseStringList(r.tags).map((t) => t.toLowerCase())
-    return tags.includes(tag)
-  })
-}
-
 export async function generateWeeklyPlanForUser(userId: string, options?: { preferHome?: boolean; nextWeek?: boolean }) {
   const user = await prisma.user.findUnique({ where: { id: userId } })
   if (!user) return null
+  if (savedGoalSafety(user)?.level === "blocked") return null
 
   const restrictions = parseStringList(user.dietRestrictions)
   const dislikes = parseStringList(user.dislikedFoods)
@@ -37,18 +30,7 @@ export async function generateWeeklyPlanForUser(userId: string, options?: { pref
   const preferences = readPreferences(user.preferences)
 
   const allRecipes = await prisma.recipe.findMany()
-  const allowed = allRecipes.filter((r) => recipeMeetsConstraints(r, restrictions, dislikes) && r.prepTime <= preferences.cookingMinutes)
-    .sort((a, b) => {
-      const liked = preferences.likedFoods.toLowerCase().split(",").map(s => s.trim()).filter(Boolean)
-      const score = (recipe: Recipe) => liked.filter(word => recipe.ingredients.toLowerCase().includes(word)).length +
-        (preferences.budget === "low" && /lins|bön|kikärt|havre/.test(recipe.ingredients.toLowerCase()) ? 1 : 0)
-      return score(b) - score(a)
-    })
-
-  const breakfasts = slotRecipes(allowed, "breakfast")
-  const lunches = slotRecipes(allowed, "lunch")
-  const dinners = slotRecipes(allowed, "dinner")
-  const anyMeal = allowed
+  const allowed = rankRecipes(allRecipes.filter(r => recipeMeetsConstraints(r, restrictions, dislikes) && r.prepTime <= preferences.cookingMinutes), preferences)
 
   const workouts = await prisma.workout.findMany()
   const location = user.trainingLocation || "both"
@@ -86,15 +68,7 @@ export async function generateWeeklyPlanForUser(userId: string, options?: { pref
 
   for (let i = 0; i < 7; i++) {
     const date = addDays(startDate, i)
-    const breakfast = pickRotating(breakfasts.length ? breakfasts : anyMeal, i, anyMeal[0])
-    const lunch = pickRotating(lunches.length ? lunches : anyMeal, i + 1, anyMeal[0])
-    const dinner = pickRotating(dinners.length ? dinners : anyMeal, i + 2, anyMeal[0])
-
-    const meals: PlannedMeal[] = allowed.length ? [
-      { slot: "Frukost", recipeId: breakfast.id, title: breakfast.title },
-      { slot: "Lunch", recipeId: lunch.id, title: lunch.title },
-      { slot: "Middag", recipeId: dinner.id, title: dinner.title },
-    ] : []
+    const meals = chooseMeals(allowed, preferences.mealSlots, i)
 
     let workout: Workout | undefined
     if (trainingDays.has(i)) {
@@ -108,7 +82,7 @@ export async function generateWeeklyPlanForUser(userId: string, options?: { pref
         weeklyPlanId: weeklyPlan.id,
         dayOfWeek: date.getDay(),
         date,
-        meals: JSON.stringify(meals),
+        meals: encodeMeals(meals, preferences.mealSlots),
         workoutId: workout?.id ?? null,
         activity,
       },

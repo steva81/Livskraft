@@ -1,3 +1,4 @@
+import { savedGoalSafety } from "./goal-safety"
 import prisma from "./prisma"
 import { startOfWeekMonday } from "./plan-types"
 import { readPreferences } from "./preferences"
@@ -15,10 +16,12 @@ export async function adaptiveStateForUser(userId: string): Promise<AdaptiveStat
   const today = new Date(); today.setHours(0,0,0,0)
   const targetStart = startOfWeekMonday(today); targetStart.setDate(targetStart.getDate()+7)
   const base: AdaptiveState = { status:"insufficient", targetStart, reason:"Vi har ännu för lite data för att göra en meningsfull anpassning. Fortsätt logga några dagar så får du ett bättre förslag.", changes:[], unchanged:"Måltider, kostregler, träningsdagar och personligt stegmål behålls.", evidenceDays:0, key:"" }
-  const stored = await prisma.adaptiveDecision.findUnique({where:{userId_targetStart:{userId,targetStart}}})
-  if (stored) return {...base,...JSON.parse(stored.summary),targetStart,status:stored.status as "accepted"|"declined"}
   const user = await prisma.user.findUnique({where:{id:userId}})
   if (!user) return base
+  const safety = savedGoalSafety(user)
+  if (safety?.level === "blocked") return { ...base, reason: safety.message }
+  const stored = await prisma.adaptiveDecision.findUnique({where:{userId_targetStart:{userId,targetStart}}})
+  if (stored) return {...base,...JSON.parse(stored.summary),targetStart,status:stored.status as "accepted"|"declined"}
   const from = new Date(today); from.setDate(from.getDate()-13)
   const logs = await prisma.dailyLog.findMany({where:{userId,date:{gte:from,lte:today}},orderBy:{date:"asc"}})
   const workouts = await prisma.workoutLog.findMany({where:{userId,completed:true,date:{gte:from,lte:today}}})

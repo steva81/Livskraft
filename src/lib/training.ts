@@ -17,7 +17,7 @@ export function equipmentFits(workout: WorkoutCandidate, homeEquipment: string):
     if (!Array.isArray(exercises) || !exercises.length || exercises.some(ex => !ex || typeof ex.name !== "string" || !ex.name.trim())) return false
     names = exercises.map(ex => ex.name.toLowerCase())
   } catch { return false }
-  const normalize = (text: string) => text.toLowerCase().replaceAll("hantlar", "hantel")
+  const normalize = (text: string) => text.toLowerCase().replace(/bodyweight/g,"kroppsvikt").replace(/dumbbells?/g,"hantel").replace(/barbell/g,"skivstång").replace(/bench/g,"bänk").replace(/resistance bands?/g,"gummiband").replace(/chair/g,"stol").replace(/\bno\b/g,"inga").replaceAll("hantlar", "hantel")
     .replace(/pull[- ]?up(?:stång)?|chinsstång/g, "pullup").replace(/resistansband|träningsband/g, "gummiband")
   names = names.map(normalize)
   const parts = normalize(homeEquipment).split(/[,;\n]|\bmen\b/)

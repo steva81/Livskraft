@@ -1,4 +1,7 @@
 "use client"
+import { translate } from "@/lib/i18n/catalog"
+import { Localize, useLanguage } from "@/lib/i18n/provider"
+
 import { useEffect, useRef, useState } from "react"
 import { Card, CardContent, CardFooter } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -24,12 +27,13 @@ const QUICK_PROMPTS = [
 
 export default function CoachPage() {
   const { userId, sessionStatus } = useMode()
-  if (sessionStatus === "loading") return <p>Laddar samtalet…</p>
-  if (!userId) return <p>Logga in för att prata med coachen.</p>
-  return <UserCoachPage key={userId} />
+  if (sessionStatus === "loading") return <Localize>{<p>Laddar samtalet…</p>}</Localize>
+  if (!userId) return <Localize>{<p>Logga in för att prata med coachen.</p>}</Localize>
+  return <Localize key={userId}>{<UserCoachPage key={userId} />}</Localize>
 }
 
 function UserCoachPage() {
+  const {language}=useLanguage()
   const { mode } = useMode()
   const conversation = useRef<HTMLDivElement>(null)
   const [messages, setMessages] = useState<Message[]>([
@@ -41,14 +45,17 @@ function UserCoachPage() {
   ])
   const [overview, setOverview] = useState<Awaited<ReturnType<typeof getCoachOverview>>>(null)
   const [overviewError, setOverviewError] = useState(false)
+  const [showPrevious,setShowPrevious]=useState(false)
+  const [hasHistory,setHasHistory]=useState(false)
+  const [previousMessages,setPreviousMessages]=useState<Message[]>([])
   const [historyReady, setHistoryReady] = useState(false)
   const [historyError, setHistoryError] = useState("")
   useEffect(() => {
     let active = true
     fetch("/api/coach", { cache: "no-store" }).then(async res => {
       if (!res.ok) throw new Error("History unavailable")
-      const data = await res.json() as { messages: Message[] }
-      if (active) { setMessages(previous => [previous[0], ...data.messages]); setHistoryReady(true) }
+      const data = await res.json() as { messages: Message[]; hasHistory:boolean }
+      if (active) { setMessages(previous => [previous[0], ...data.messages]); setHistoryReady(true); setHasHistory(data.hasHistory) }
     }).catch(() => { if (active) setHistoryError("Kunde inte läsa historiken. Ladda om sidan för att försöka igen.") })
     return () => { active = false }
   }, [])
@@ -96,7 +103,7 @@ function UserCoachPage() {
   }
 
   const clearHistory = async () => {
-    if (loading || !window.confirm("Vill du radera din sparade Coach-historik?")) return
+    if (loading || !window.confirm(translate("Vill du radera din sparade Coach-historik?",language))) return
     setLoading(true)
     try {
       const res = await fetch("/api/coach", { method: "DELETE" })
@@ -104,6 +111,7 @@ function UserCoachPage() {
       setMessages(previous => previous.slice(0, 1))
       setHistoryError("")
       setHistoryReady(true)
+      setPreviousMessages([]);setHasHistory(false);setShowPrevious(false)
     } catch { setHistoryError("Kunde inte radera historiken. Försök igen.") }
     finally { setLoading(false) }
   }
@@ -113,7 +121,7 @@ function UserCoachPage() {
     sendMessage(input)
   }
 
-  return (
+  return <Localize>{(
     <div className="max-w-4xl mx-auto flex flex-col gap-4">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Livskraft Coach</h1>
@@ -127,7 +135,7 @@ function UserCoachPage() {
         <div className="grid gap-2 sm:grid-cols-3">
         <p>Nästa måltid: {overview.nextMeal??(overview.hasMealPlan ? "Alla planerade måltider är klara." : "Ingen matplan som matchar din profil just nu.")}</p>
         <p>Träning: {overview.workout??"Vilodag från styrketräning"}</p>
-        <p>{overview.steps.toLocaleString("sv-SE")} av {overview.stepGoal.toLocaleString("sv-SE")} steg</p>
+        <p>{overview.steps.toLocaleString(language==="en"?"en-GB":"sv-SE")} av {overview.stepGoal.toLocaleString(language==="en"?"en-GB":"sv-SE")} steg</p>
         </div>
         {mode === "advanced" && <p className="text-muted-foreground">Kostregler: {overview.restrictions.map(displayValue).join(", ") || "Inga angivna"}. Mat du ogillar: {overview.dislikedFoods.join(", ") || "Inga angivna"}.</p>}
       </CardContent></Card>}
@@ -150,7 +158,7 @@ function UserCoachPage() {
                     <Leaf className="w-3 h-3" /> Coach
                   </div>
                 )}
-                {msg.text}
+                <span data-localize={msg.role==="user"?"off":undefined}>{msg.text}</span>
               </div>
             </div>
           ))}
@@ -182,13 +190,15 @@ function UserCoachPage() {
       </Card>
 
       {/* Quick-prompt chips */}
-      <p className="text-xs text-muted-foreground">De senaste 50 frågorna och svaren sparas på ditt konto. Undvik att skriva känsliga uppgifter. Råden utgår från din sparade plan och kostprofil; tidigare meddelanden används inte som underlag för nya svar.</p>
-      <Button variant="outline" onClick={clearHistory} disabled={loading || !historyReady || messages.length < 2}>Radera historik</Button>
+      <p className="text-xs text-muted-foreground">De senaste 50 frågorna och svaren sparas på ditt konto. De senaste 12 meddelandena används som samtalskontext. Undvik att skriva känsliga uppgifter.</p>
+      <Button variant="outline" onClick={async()=>{if(showPrevious){setShowPrevious(false);return}try{const res=await fetch("/api/coach?history=all",{cache:"no-store"});if(!res.ok)throw new Error();setPreviousMessages((await res.json()).messages);setShowPrevious(true)}catch{setHistoryError("Kunde inte läsa historiken. Ladda om sidan för att försöka igen.")}}}>Tidigare samtal</Button>
+      {showPrevious && <section className="rounded border p-4 space-y-3 max-h-96 overflow-auto" aria-label="Tidigare samtal">{previousMessages.length ? previousMessages.map(m=><p key={m.id} data-localize="off" className="text-sm whitespace-pre-wrap"><strong>{m.role==="coach"?"Coach":overview?.name}: </strong>{m.text}</p>) : <p>Ingen tidigare historik.</p>}</section>}
+      <Button variant="outline" onClick={clearHistory} disabled={loading || !historyReady || !hasHistory && messages.length < 2}>Radera historik</Button>
       <div className="grid gap-2 sm:grid-cols-2">
         {QUICK_PROMPTS.map((p) => (
           <button
             key={p}
-            onClick={() => sendMessage(p)}
+            onClick={() => sendMessage(translate(p,language))}
             disabled={loading || !historyReady}
             className="text-sm text-left bg-white border rounded-lg px-3 py-3 hover:bg-gray-50 transition disabled:opacity-50"
           >
@@ -197,5 +207,5 @@ function UserCoachPage() {
         ))}
       </div>
     </div>
-  )
+  )}</Localize>
 }
