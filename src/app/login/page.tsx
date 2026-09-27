@@ -25,7 +25,7 @@ function LoginForm() {
     if (res?.error) {
       setError("Fel e-post eller lösenord.")
     } else {
-      router.push("/dashboard")
+      router.push("/home")
     }
   }
 

@@ -130,7 +130,8 @@ function UserCoachPage() {
 
       {overviewError && <p role="status" className="text-sm">Kunde inte läsa dagens översikt. Ladda om sidan för att försöka igen.</p>}
       {historyError && <p role="alert" className="text-sm text-red-700">{historyError}</p>}
-      {overview && <Card><CardContent className="p-4 space-y-2 text-sm">
+      {overview&&!overview.ready&&<p data-localize="off" className="rounded-xl border p-4">{language==="en"?"Complete My Plan for personal recommendations. General guidance is available meanwhile.":"Komplettera Min plan för personliga rekommendationer. Under tiden finns allmänna råd."} <a className="underline" href="/my-plan">{language==="en"?"Complete My Plan":"Komplettera min plan"}</a></p>}
+      {overview?.ready && <Card><CardContent className="p-4 space-y-2 text-sm">
         <p className="font-semibold">Hej {overview.name}, vad behöver du idag?</p>
         <div className="grid gap-2 sm:grid-cols-3">
         <p>Nästa måltid: {overview.nextMeal??(overview.hasMealPlan ? "Alla planerade måltider är klara." : "Ingen matplan som matchar din profil just nu.")}</p>

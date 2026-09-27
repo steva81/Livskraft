@@ -16,12 +16,12 @@ const {encodeMeals,startOfWeekMonday}=require('../src/lib/plan-types')
 const {photoMealProvider}=require('../src/lib/photo-meals')
 const users=[],recipes=[]
 async function main(){
- const year=new Date().getFullYear(), profile={currentWeight:80,targetWeight:80,timeframeWeeks:26,height:180,activityLevel:'moderate',preferences:JSON.stringify({...defaultPreferences,birthYear:year-40,sexForEnergy:'male',primaryGoal:'maintain'})}
+ const year=new Date().getFullYear(), profile={currentWeight:80,targetWeight:80,timeframeWeeks:26,height:180,activityLevel:'moderate',trainingLevel:'beginner',trainingLocation:'home',preferences:JSON.stringify({...defaultPreferences,planningConfirmed:true,birthYear:year-40,sexForEnergy:'male',primaryGoal:'maintain'})}
  assert.equal(ageFromBirthYear(1986,new Date('2026-01-01')),40);assert.equal(ageFromBirthYear(undefined),null);assert.equal(ageFromBirthYear(year+1),null);assert.equal(ageFromBirthYear(year-17),null)
  const male=nutritionTarget(profile),female=nutritionTarget({...profile,preferences:JSON.stringify({...JSON.parse(profile.preferences),sexForEnergy:'female'})})
  assert.equal(male.baseline,1730);assert.equal(female.baseline,1564);assert.equal(male.confidence,'higher');assert.equal(male.calories,male.maintenance)
  for(const missing of [{birthYear:undefined},{sexForEnergy:undefined},{sexForEnergy:'undisclosed'}]){const n=nutritionTarget({...profile,preferences:JSON.stringify({...JSON.parse(profile.preferences),...missing})});assert.equal(n.confidence,'lower');assert.equal(n.baseline,null)}
- assert.equal(nutritionTarget({...profile,preferences:null}).confidence,'lower');assert.equal(nutritionTarget({...profile,currentWeight:null}),null)
+ assert.equal(nutritionTarget({...profile,preferences:null}),null);assert.equal(nutritionTarget({...profile,currentWeight:null}),null)
  for(const goal of primaryGoals){const n=nutritionTarget({...profile,preferences:JSON.stringify({...JSON.parse(profile.preferences),primaryGoal:goal})});if(goal==='lose'){assert(n.calories<n.maintenance);assert(n.maintenance-n.calories<=300)}else if(goal==='build-muscle'){assert(n.calories>n.maintenance);assert(n.calories-n.maintenance<=200)}else assert.equal(n.calories,n.maintenance);assert.equal(n.protein,goal==='maintain'?96:128)}
  assert.equal(nutritionTarget({...profile,currentWeight:100,targetWeight:50,timeframeWeeks:1}),null)
  assert.equal(weightTrend([{date:new Date(),weight:80}]),null)
@@ -30,20 +30,20 @@ async function main(){
  assert.equal(photoMealProvider.available,false);await assert.rejects(photoMealProvider.analyze(new Blob()))
  console.log('PASS four goals, formula coefficients, age derivation, missing baseline data, confidence, protein, incomplete totals, labels and photo fallback')
  const skippedEmail=`next-skipped-${Date.now()}@example.invalid`
- assert((await actions.submitOnboarding({name:'Optional baseline test',email:skippedEmail,password:'Local-test-only-123',currentWeight:'',targetWeight:'',height:'',timeframeWeeks:12,preferences:{...defaultPreferences,primaryGoal:'maintain'}})).success)
- const skipped=await prisma.user.findUniqueOrThrow({where:{email:skippedEmail}})
+ assert.equal((await actions.submitOnboarding({name:'Optional baseline test',email:skippedEmail,password:'Local-test-only-123',currentWeight:'',height:'',preferences:{...defaultPreferences,primaryGoal:'maintain'}})).success,false)
+ const skipped=await prisma.user.create({data:{name:'Legacy incomplete',email:skippedEmail}})
  users.push(skipped.id);identity=skipped.id
- assert.equal(nutritionTarget(skipped),null);assert.equal(skipped.timeframeWeeks,null);assert(await actions.getWeeklyPlan())
- await meals.saveBodyData({height:180,currentWeight:80});assert(await actions.getWeeklyPlan())
+ assert.equal(nutritionTarget(skipped),null);assert.equal(await actions.getWeeklyPlan(),null)
+ await meals.saveBodyData({height:180,currentWeight:80});assert.equal(await actions.getWeeklyPlan(),null)
  users.pop();await prisma.user.delete({where:{id:skipped.id}})
- console.log('PASS skipped onboarding body data and later optional baseline completion preserve planning')
+ console.log('PASS required onboarding body data and legacy profile completion guard')
  for(const suffix of ['a','b']){const u=await prisma.user.create({data:{name:'Next phase test',email:`next-${suffix}-${Date.now()}@example.invalid`,...profile}});users.push(u.id)}
  identity=users[0]
  await meals.saveBodyData({birthYear:year-35,sexForEnergy:'female',height:175,currentWeight:78,userId:users[1]})
  let u=await actions.getUser();assert.equal(u.height,175);assert.equal(readPreferences(u.preferences).birthYear,year-35)
  assert.equal((await prisma.user.findUnique({where:{id:users[1]}})).height,180)
  await assert.rejects(meals.saveBodyData({birthYear:year+1,height:175,currentWeight:78}))
- for(const goal of primaryGoals){const result=await actions.updateWeightGoal({primaryGoal:goal,currentWeight:80,targetWeight:goal==='lose'?75:goal==='build-muscle'?83:60,timeframeWeeks:26});assert(result.success);u=await actions.getUser();assert.equal(primaryGoal(u),goal);if(goal==='maintain'||goal==='retain-muscle')assert.equal(u.targetWeight,80);assert.equal(readPreferences(u.preferences).birthYear,year-35)}
+ for(const goal of primaryGoals){const result=await actions.updateWeightGoal({primaryGoal:goal,currentWeight:80,targetWeight:goal==='lose'?75:goal==='build-muscle'?83:60,timeframeWeeks:26});assert(result.success);u=await actions.getUser();assert.equal(primaryGoal(u),goal);if(goal==='maintain'||goal==='retain-muscle')assert.equal(u.targetWeight,null);assert.equal(readPreferences(u.preferences).birthYear,year-35)}
  await meals.saveBodyData({height:null,currentWeight:80,sexForEnergy:'undisclosed'})
  assert.equal(readPreferences((await actions.getUser()).preferences).birthYear,undefined)
  console.log('PASS baseline and four-goal persistence, optional clearing, validation and user isolation')
@@ -61,6 +61,7 @@ async function main(){
  // Dedicated recipes with known fibre make the verified replacement path testable;
  // no production recipe metadata is fabricated or changed.
  for(const [title,calories,amount] of [['Fixture original',2500,100],['Fixture replacement',2450,90]]){const recipe=await prisma.recipe.create({data:{title,description:'Test only',prepTime:10,tags:'["dinner","vegan","fiber-source"]',ingredients:JSON.stringify([`${amount} g ris`]),instructions:'[]',nutrition:JSON.stringify({calories,protein:130,carbs:300,fat:60,fibre:30})}});recipes.push(recipe.id)}
+ await meals.saveBodyData({height:180,currentWeight:80})
  await actions.updateWeightGoal({primaryGoal:'maintain',currentWeight:80,targetWeight:80,timeframeWeeks:26})
  const week=await actions.getWeeklyPlan(), today=new Date();today.setHours(0,0,0,0)
  const day=week.planDays.find(d=>+d.date===+today), original=encodeMeals([{slot:'Middag',recipeId:recipes[0],title:'Fixture original'}],['Middag'])

@@ -14,7 +14,8 @@
     "test:goal-safety": "node tests/goal-safety.cjs",
     "test:phase": "node tests/phase.cjs",
     "test:refinement": "node tests/refinement.cjs",
-    "test:next-phase": "node tests/next-phase.cjs"
+    "test:next-phase": "node tests/next-phase.cjs",
+    "test:mobile-refinement": "node tests/mobile-refinement.cjs"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",

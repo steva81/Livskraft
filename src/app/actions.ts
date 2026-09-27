@@ -2,6 +2,8 @@
 
 import { primaryGoal, primaryGoals, type PrimaryGoal } from "@/lib/nutrition"
 import { dailyNutritionForUser } from "@/lib/daily-nutrition"
+import { profileReadiness } from "@/lib/profile-readiness"
+import { onboardingErrors } from "@/lib/onboarding-validation"
 import { Prisma } from "@prisma/client"
 import prisma from "@/lib/prisma"
 import { revalidatePath } from "next/cache"
@@ -113,16 +115,16 @@ function todayDate() {
 }
 
 export async function submitOnboarding(data: OnboardingData) {
-  if (["maintain","retain-muscle"].includes(data.preferences?.primaryGoal ?? "")) data={...data,targetWeight:data.currentWeight}
-  if ((data.preferences?.primaryGoal === "lose" && Number(data.targetWeight)>Number(data.currentWeight)) || (data.preferences?.primaryGoal === "build-muscle" && Number(data.targetWeight)<Number(data.currentWeight))) return {success:false as const,error:"Målvikten behöver stämma med ditt mål."}
-  const weeks = Number(data.timeframeWeeks)
-  const currentWeight = Number(data.currentWeight)
-  const targetWeight = Number(data.targetWeight)
-  const hasWeightGoal = data.currentWeight != null && data.currentWeight !== "" || data.targetWeight != null && data.targetWeight !== ""
-  const safety = hasWeightGoal ? assessGoal(data) : {level:"normal",message:""}
-  if (safety.level === "blocked") return { success: false as const, error: safety.message }
-  const isAggressive = safety.level === "aggressive"
-  const preferences = { ...defaultPreferences, ...data.preferences }
+  for (const step of [1,3,4]) { const errors=onboardingErrors(data,step,data.preferences?.language==="en"); if(Object.keys(errors).length)return {success:false as const,error:Object.values(errors)[0]} }
+  const goal=data.preferences!.primaryGoal
+  const usesWeightGoal=goal==="lose" || goal==="build-muscle" && !!data.targetWeight
+  const weeks=usesWeightGoal?Number(data.timeframeWeeks):null
+  const currentWeight=Number(data.currentWeight)
+  const targetWeight=usesWeightGoal?Number(data.targetWeight):null
+  const safety=usesWeightGoal?assessGoal(data):{level:"normal",message:""}
+  if(safety.level==="blocked")return {success:false as const,error:safety.message}
+  const isAggressive=safety.level==="aggressive"
+  const preferences={...defaultPreferences,...data.preferences,planningConfirmed:true,homeVisited:false}
   if (!validPreferences(preferences)) return { success: false as const, error: "Kontrollera dina profilval." }
   if ([preferences.budget, preferences.likedFoods, preferences.equipment, preferences.workSchedule, preferences.measurements]
       .some(value => typeof value !== "string" || value.length > 500)) {
@@ -146,29 +148,24 @@ export async function submitOnboarding(data: OnboardingData) {
     return { success: false as const, error: "Kontrollera dina kost- och livsstilsval." }
   }
 
-  let stepGoal = 7000
-  if (data.activityLevel === "active" || data.activityLevel === "very_active") stepGoal = 10000
-  if (data.activityLevel === "sedentary") stepGoal = 5000
-  if (data.activityLevel === "moderate") stepGoal = 8000
-  if (data.activityLevel === "light") stepGoal = 6500
+  const stepGoal = Math.min(12000, Math.max(2000, preferences.dailySteps + 1000))
 
   const email = (data.email || "").trim().toLowerCase()
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254 || !data.password || data.password.length < 10 || data.password.length > 256) {
     return { success: false as const, error: "Ange giltig e-post och lösenord med 10–256 tecken." }
   }
-  if (data.preferences) stepGoal = Math.min(12000, Math.max(2000, preferences.dailySteps + 1000))
 
   try {
     await prisma.user.create({
       data: {
-        name: data.name || "Ny Användare",
+        name: data.name!.trim(),
         email,
         password: await hashPassword(data.password),
         preferences: JSON.stringify(preferences),
         waist: Number(data.waist) > 0 ? Number(data.waist) : null,
         currentWeight: currentWeight || null,
         targetWeight: targetWeight || null,
-        timeframeWeeks: hasWeightGoal ? weeks : null,
+        timeframeWeeks: weeks,
         height: parseFloat(String(data.height)) || null,
         activityLevel: data.activityLevel || "light",
         stepGoal,
@@ -273,7 +270,7 @@ export async function getWeeklyPlan(nextWeek = false) {
   const userId = await getAuthenticatedUserId()
   if (!userId) return null
   const goalUser = await prisma.user.findUnique({ where: { id: userId } })
-  if (goalUser && savedGoalSafety(goalUser)?.level === "blocked") return null
+  if (goalUser && (!profileReadiness(goalUser).ready || savedGoalSafety(goalUser)?.level === "blocked")) return null
   const today = todayDate()
   if (nextWeek === true) today.setDate(today.getDate() + 7)
 
@@ -350,7 +347,7 @@ export async function getProgressSummary() {
   const average = (values: number[]) => values.length >= 2 ? values.reduce((sum, value) => sum + value, 0) / values.length : null
   const currentAverage = average(logs.filter(l => l.date >= weekStart && l.weight != null).map(l => l.weight!))
   const previousAverage = average(logs.filter(l => l.date < weekStart && l.weight != null).map(l => l.weight!))
-  const latestWeight = weights.at(-1) ?? user.currentWeight
+  const latestWeight = user.currentWeight ?? weights.at(-1) ?? null
   const latestMeasurement = await prisma.dailyLog.findFirst({where:{userId, measurements:{not:null}},orderBy:{date:"desc"},select:{measurements:true,date:true}})
   const firstWeight = weights[0] ?? user.currentWeight
   const avgSteps =
@@ -359,13 +356,14 @@ export async function getProgressSummary() {
   const weeklyAverageSteps = recentLogs.length ? Math.round(recentLogs.reduce((sum, l) => sum + l.steps, 0) / recentLogs.length) : null
 
   const weeklyPlan = await getWeeklyPlan()
-  const plannedWorkouts = weeklyPlan?.planDays.filter(day=>day.workoutId).length ?? readPreferences(user.preferences).trainingDays
+  const ready = profileReadiness(user).ready
+  const plannedWorkouts = !ready ? 0 : weeklyPlan?.planDays.filter(day=>day.workoutId).length ?? readPreferences(user.preferences).trainingDays
 
   return {
-    preferences: readPreferences(user.preferences),
+    ready, preferences: readPreferences(user.preferences),
     primaryGoal: primaryGoal(user),
     currentAverage, previousAverage, weeklyAverageSteps,
-    stepGoalDays: recentLogs.filter(l => l.steps >= user.stepGoal).length,
+    stepGoalDays: !ready ? null : recentLogs.filter(l => l.steps >= user.stepGoal).length,
     latestWeight,
     latestMeasurement,
     firstWeight,
@@ -374,7 +372,7 @@ export async function getProgressSummary() {
     logs: logs.map((l) => ({ date: l.date, steps: l.steps, stepsRecorded: l.stepsRecorded || l.steps > 0, weight: l.weight, waist: l.waist, measurements: l.measurements })),
     plannedWorkouts,
     waist: user.waist,
-    stepGoal: user.stepGoal,
+    stepGoal: ready ? user.stepGoal : null,
   }
 }
 
@@ -486,6 +484,7 @@ export async function getCoachContext() {
   const eaten = parseStringList(log?.mealsEaten)
   return {
     health: preferences.health, language: preferences.language, budget: preferences.budget, workSchedule: preferences.workSchedule,
+    readiness:profileReadiness(user),
     primaryGoal: primaryGoal(user), nutrition: await dailyNutritionForUser(user.id),
     goal: { currentWeight:user.currentWeight, targetWeight:user.targetWeight, timeframeWeeks:user.timeframeWeeks },
     userName:user.name.split(" ")[0], restrictions:parseStringList(user.dietRestrictions), dislikedFoods:parseStringList(user.dislikedFoods),
@@ -501,25 +500,28 @@ export async function getCoachContext() {
 export async function getCoachOverview() {
   const context = await getCoachContext()
   if (!context) return null
-  return { name:context.userName, nextMeal:context.plannedMeals.find(m=>!m.completed)?.title??null,
+  return { ready:context.readiness?.ready===true, name:context.userName, nextMeal:context.plannedMeals.find(m=>!m.completed)?.title??null,
     hasMealPlan:context.plannedMeals.length>0, restrictions:context.restrictions, dislikedFoods:context.dislikedFoods,
     workout:context.todayWorkout, steps:context.stepsToday, stepGoal:context.stepGoal }
 }
 
-export async function updateWeightGoal(input: { currentWeight: number; targetWeight: number; timeframeWeeks: number; primaryGoal?: PrimaryGoal }) {
+export async function updateWeightGoal(input: { currentWeight?: number; targetWeight?: number | null; timeframeWeeks?: number | null; primaryGoal?: PrimaryGoal }) {
   const userId = await getAuthenticatedUserId()
   if (!userId) return { success: false as const, error: "Logga in först." }
   if (input.primaryGoal && !primaryGoals.includes(input.primaryGoal)) return { success: false as const, error: "Ogiltigt mål" }
   const saved = await prisma.user.findUniqueOrThrow({where:{id:userId}})
-  const preferences = {...readPreferences(saved.preferences), ...(input.primaryGoal ? {primaryGoal:input.primaryGoal} : {})}
-  if (!validPreferences(preferences)) return {success:false as const,error:"Kontrollera ålder och profilval"}
   const goal = input.primaryGoal ?? primaryGoal(saved)
-  if (input.primaryGoal && ((goal === "lose" && input.targetWeight > input.currentWeight) || (goal === "build-muscle" && input.targetWeight < input.currentWeight))) return {success:false as const,error:"Målvikten behöver stämma med ditt mål."}
-  if (input.primaryGoal && (goal === "maintain" || goal === "retain-muscle")) input = {...input,targetWeight:input.currentWeight}
-  const safety = assessGoal(input)
-  if (safety.level === "blocked") return { success: false as const, error: safety.message }
+  const preferences = {...readPreferences(saved.preferences), primaryGoal:goal}
+  if (!validPreferences(preferences)) return {success:false as const,error:"Kontrollera ålder och profilval"}
+  const changing = goal === "lose" || (goal === "build-muscle" && (input.targetWeight != null || input.timeframeWeeks != null))
+  if (changing) {
+    if (!saved.currentWeight) return {success:false as const,error:"Ange aktuell vikt under Kropp och grunddata först."}
+    if ((goal === "lose" && Number(input.targetWeight)>saved.currentWeight) || (goal === "build-muscle" && Number(input.targetWeight)<saved.currentWeight)) return {success:false as const,error:"Målvikten behöver stämma med ditt mål."}
+    const safety = assessGoal({currentWeight:saved.currentWeight,targetWeight:input.targetWeight,timeframeWeeks:input.timeframeWeeks})
+    if (safety.level === "blocked") return { success: false as const, error: safety.message }
+  }
   await prisma.user.update({ where: { id: userId }, data: {
-    preferences: JSON.stringify(preferences), currentWeight: Number(input.currentWeight), targetWeight: Number(input.targetWeight), timeframeWeeks: Number(input.timeframeWeeks),
+    preferences: JSON.stringify(preferences), targetWeight: changing ? Number(input.targetWeight) : null, timeframeWeeks: changing ? Number(input.timeframeWeeks) : null,
   } })
   revalidatePath("/", "layout")
   return { success: true as const }
@@ -544,7 +546,7 @@ export async function selectPlanMeals(planId: string, slots: MealSlot[], dayId?:
   if (!validSlots(slots)) throw new Error("Ogiltiga måltider")
   await prisma.$transaction(async tx => {
     const user = await tx.user.findUniqueOrThrow({where:{id:userId}})
-    if (savedGoalSafety(user)?.level === "blocked") throw new Error("Justera målet i Min profil")
+    if (!profileReadiness(user).ready || savedGoalSafety(user)?.level === "blocked") throw new Error("Komplettera Min plan först")
     const plan = await tx.weeklyPlan.findFirst({where:{id:planId,userId},include:{planDays:{orderBy:{date:"asc"}}}})
     if (!plan || (dayId && !plan.planDays.some(day=>day.id===dayId))) throw new Error("Planen saknas")
     const preferences = readPreferences(user.preferences)
@@ -576,18 +578,24 @@ export async function saveMyPlan(input:{dietRestrictions:string[];dislikedFoods:
   if(!input || !["home","gym","both"].includes(input.trainingLocation) || !["beginner","intermediate","advanced"].includes(input.trainingLevel) || !["sedentary","light","moderate","active","very_active"].includes(input.activityLevel) || [input.dietRestrictions,input.dislikedFoods,input.lifestyle].some(v=>!Array.isArray(v)||v.length>50||v.some(s=>typeof s!=="string"||s.length>100))) throw new Error("Kontrollera dina profilval")
   await prisma.$transaction(async tx=>{
     const user=await tx.user.findUniqueOrThrow({where:{id:userId}})
-    const keys=["dailySteps","cookingMinutes","workoutMinutes","trainingDays","budget","likedFoods","equipment","workSchedule","health","mealSlots","trackedMeasurements"]
+    const keys=["planningConfirmed","dailySteps","cookingMinutes","workoutMinutes","trainingDays","budget","likedFoods","equipment","workSchedule","health","mealSlots","trackedMeasurements"]
     const preferences={...readPreferences(user.preferences),...Object.fromEntries(Object.entries(input.preferences??{}).filter(([k])=>keys.includes(k)))}
     if(!validPreferences(preferences))throw new Error("Kontrollera dina profilval")
     await tx.user.update({where:{id:userId},data:{preferences:JSON.stringify(preferences),dietRestrictions:JSON.stringify(input.dietRestrictions),dislikedFoods:JSON.stringify(input.dislikedFoods),lifestyle:JSON.stringify(input.lifestyle),trainingLocation:input.trainingLocation,trainingLevel:input.trainingLevel,activityLevel:input.activityLevel,stepGoal:Math.min(12000,Math.max(2000,preferences.dailySteps+1000))}})
     // Refresh upcoming days in place; keep day selections, shopping identities and past logs.
     const recipes=rankRecipes((await tx.recipe.findMany()).filter(r=>recipeMeetsConstraints(r,input.dietRestrictions,input.dislikedFoods)&&r.prepTime<=preferences.cookingMinutes),preferences)
     const workouts=(await tx.workout.findMany()).filter(w=>(input.trainingLocation==="both"||w.type===input.trainingLocation)&&workoutFits(w,input.trainingLevel,preferences.equipment,preferences.workoutMinutes))
+    const ready=profileReadiness({...user,preferences:JSON.stringify(preferences),activityLevel:input.activityLevel,trainingLevel:input.trainingLevel,trainingLocation:input.trainingLocation}).ready
     const trainingDays=new Set([0,3,5,1,4].slice(0,preferences.trainingDays))
     const days=await tx.planDay.findMany({where:{weeklyPlan:{userId},date:{gte:todayDate()}},orderBy:{date:"asc"}})
-    for(const day of days){const index=(day.dayOfWeek+6)%7;const slots=selectedSlots(day.meals);await tx.planDay.update({where:{id:day.id},data:{meals:encodeMeals(chooseMeals(recipes,slots,index),slots),workoutId:trainingDays.has(index)?workouts[index%Math.max(workouts.length,1)]?.id??null:null}})}
+    for(const day of ready?days:[]){const index=(day.dayOfWeek+6)%7;const slots=selectedSlots(day.meals);await tx.planDay.update({where:{id:day.id},data:{meals:encodeMeals(chooseMeals(recipes,slots,index),slots),workoutId:trainingDays.has(index)?workouts[index%Math.max(workouts.length,1)]?.id??null:null}})}
     await tx.adaptiveDecision.deleteMany({where:{userId,targetStart:{gte:startOfWeekMonday()}}})
   })
   revalidatePath("/","layout")
   return getUser()
+}
+
+export async function getHomeOverview() {
+ const userId=await getAuthenticatedUserId();if(!userId)return null
+ return prisma.$transaction(async tx=>{const user=await tx.user.findUniqueOrThrow({where:{id:userId}});const p=readPreferences(user.preferences);const firstVisit=p.homeVisited===false;if(firstVisit)await tx.user.update({where:{id:userId},data:{preferences:JSON.stringify({...p,homeVisited:true})}});return {user:toPublicUser(user),firstVisit}})
 }

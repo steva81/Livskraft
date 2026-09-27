@@ -1,3 +1,4 @@
+import { profileReadiness } from "./profile-readiness"
 import type { Workout } from "@prisma/client"
 import prisma from "@/lib/prisma"
 import { parseStringList, recipeMeetsConstraints } from "@/lib/dietary"
@@ -21,7 +22,7 @@ function addDays(date: Date, days: number): Date {
 
 export async function generateWeeklyPlanForUser(userId: string, options?: { preferHome?: boolean; nextWeek?: boolean }) {
   const user = await prisma.user.findUnique({ where: { id: userId } })
-  if (!user) return null
+  if (!user || !profileReadiness(user).ready) return null
   if (savedGoalSafety(user)?.level === "blocked") return null
 
   const restrictions = parseStringList(user.dietRestrictions)

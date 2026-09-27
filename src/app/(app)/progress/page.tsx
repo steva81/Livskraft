@@ -79,7 +79,7 @@ export default function ProgressPage() {
         <p className="text-muted-foreground">Trender, mätningar och din adaptiva vecka.</p>
       </div>
 
-      {summary && <div data-localize="off" className="rounded-xl border p-4"><p className="font-semibold">{goalLabels[language][summary.primaryGoal]}</p><p>{goalGuidance(summary.primaryGoal,language==="en")}</p><p>{progressGuidance(summary.primaryGoal,average!=null&&first!=null?average-first:null,language==="en")}</p></div>}
+      {summary?.ready && <div data-localize="off" className="rounded-xl border p-4"><p className="font-semibold">{goalLabels[language][summary.primaryGoal]}</p><p>{goalGuidance(summary.primaryGoal,language==="en")}</p><p>{progressGuidance(summary.primaryGoal,average!=null&&first!=null?average-first:null,language==="en")}</p></div>}
       <WeeklyNutrition />
       <NutritionBalance trend />
       <Card><CardHeader><CardTitle>Registrera dagens mätning</CardTitle><CardDescription>Frivilligt. En enskild mätning ändrar inte planen.</CardDescription></CardHeader><CardContent>
@@ -159,8 +159,8 @@ export default function ProgressPage() {
           </CardContent>
         </Card>
         <Card className="md:col-span-2"><CardHeader><CardTitle>Träning denna vecka</CardTitle></CardHeader><CardContent><p>{completedWorkoutsText(summary?.workoutsThisWeek ?? 0)} av {summary?.plannedWorkouts ?? 0} planerade.</p><a className="text-sm text-primary underline" href="/training">Se pass och träningslogg</a></CardContent></Card>
-        <Card className="md:col-span-2"><CardHeader><CardTitle>Steg &amp; vardagsrörelse</CardTitle><CardDescription>Senaste sju dagarna: {summary?.weeklyAverageSteps?.toLocaleString(language==="en"?"en-GB":"sv-SE") ?? "–"} steg i snitt per loggad dag. Personligt mål: {summary?.stepGoal?.toLocaleString(language==="en"?"en-GB":"sv-SE")} steg.</CardDescription></CardHeader><CardContent>
-          <p className="text-sm mb-3">Stegmålet nåddes {summary?.stepGoalDays ?? 0} {(summary?.stepGoalDays ?? 0)===1 ? "dag" : "dagar"}. Ologgade dagar räknas inte som noll.</p>
+        <Card className="md:col-span-2"><CardHeader><CardTitle>Steg &amp; vardagsrörelse</CardTitle><CardDescription>Senaste sju dagarna: {summary?.weeklyAverageSteps?.toLocaleString(language==="en"?"en-GB":"sv-SE") ?? "–"} steg i snitt per loggad dag. {summary?.ready ? `Personligt mål: ${summary.stepGoal?.toLocaleString(language==="en"?"en-GB":"sv-SE")} steg.` : (language==="en"?"Confirm your step goal in My Plan.":"Bekräfta stegmål i Min plan.")}</CardDescription></CardHeader><CardContent>
+          {summary?.ready&&<p className="text-sm mb-3">Stegmålet nåddes {summary?.stepGoalDays ?? 0} {(summary?.stepGoalDays ?? 0)===1 ? "dag" : "dagar"}. Ologgade dagar räknas inte som noll.</p>}
           {mode === "advanced" && stepLogs.length>0 && <><p className="text-xs text-muted-foreground mb-2">Loggade dagar under de senaste två veckorna</p><div className="h-28 flex items-end gap-2" role="img" aria-label="Steg per loggad dag">{stepLogs.map(l=><div key={String(l.date)} className="flex-1 bg-primary rounded-t" style={{height:(l.steps/maxSteps*100)+"%"}} title={new Date(l.date).toLocaleDateString(language==="en"?"en-GB":"sv-SE")+": "+l.steps+" steg"} />)}</div><ul className="text-xs mt-3 space-y-1">{stepLogs.map(l=><li key={String(l.date)}>{new Date(l.date).toLocaleDateString(language==="en"?"en-GB":"sv-SE")}: {l.steps.toLocaleString(language==="en"?"en-GB":"sv-SE")} steg</li>)}</ul></>}
           {stepLogs.length===0 && <p className="text-sm text-muted-foreground">Spara dagens steg på Idag-sidan för att börja.</p>}
         </CardContent></Card>

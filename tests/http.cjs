@@ -15,7 +15,7 @@ function client() {
 }
 async function main() {
   const anonymous=client()
-  for(const route of ['/my-plan','/account','/dashboard','/plan','/meals','/training','/progress','/coach','/profile']) {
+  for(const route of ['/home','/my-plan','/account','/dashboard','/plan','/meals','/training','/progress','/coach','/profile']) {
     const response=await anonymous(route)
     assert.equal(response.status,307)
     assert(response.headers.get('location').includes('/login'))
@@ -24,7 +24,7 @@ async function main() {
   console.log('PASS all protected pages redirect; anonymous coach returns 401')
   for(const name of ['TestAlpha','TestBeta']) {
     const email=`http-${name.toLowerCase()}-${Date.now()}@example.invalid`
-    const user=await prisma.user.create({data:{name,email,password:await hashPassword('local-test-12345'),dietRestrictions:'["allergy:unknown"]'}})
+    const user=await prisma.user.create({data:{name,email,currentWeight:80,height:175,activityLevel:'light',trainingLevel:'beginner',trainingLocation:'home',preferences:JSON.stringify({primaryGoal:'maintain',planningConfirmed:true}),password:await hashPassword('local-test-12345'),dietRestrictions:'["allergy:unknown"]'}})
     ids.push(user.id)
     const today=new Date();today.setHours(0,0,0,0)
     const steps=name==='TestAlpha'?1234:5678
@@ -43,7 +43,7 @@ async function main() {
     const stepsReply=await (await request('/api/coach',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({message:'mina steg'})})).json()
     assert(stepsReply.reply.includes(steps.toLocaleString('sv-SE')))
     const language=name==='TestAlpha'?'en':'sv'
-    await prisma.user.update({where:{id:user.id},data:{preferences:JSON.stringify({language,health:'type1',workSchedule:'kvall',budget:'high'})}})
+    await prisma.user.update({where:{id:user.id},data:{preferences:JSON.stringify({primaryGoal:'maintain',planningConfirmed:true,language,health:'type1',workSchedule:'kvall',budget:'high'})}})
     const signoutCsrf=await (await request('/api/auth/csrf')).json()
     await request('/api/auth/signout',{method:'POST',headers:{'content-type':'application/x-www-form-urlencoded'},body:new URLSearchParams({csrfToken:signoutCsrf.csrfToken,json:'true'})})
     assert(!(await (await request('/api/auth/session')).json()).user)

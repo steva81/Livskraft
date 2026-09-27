@@ -23,7 +23,7 @@ const {recipeMeetsConstraints}=require('../src/lib/dietary')
 const {translate}=require('../src/lib/i18n/catalog')
 const ids=[]
 async function main(){
- const a=await prisma.user.create({data:{name:'Refine A',email:`refine-a-${Date.now()}@example.invalid`,password:await hashPassword('Refinement-Test-123'),currentWeight:80,targetWeight:75,timeframeWeeks:26}});ids.push(a.id)
+ const a=await prisma.user.create({data:{name:'Refine A',email:`refine-a-${Date.now()}@example.invalid`,password:await hashPassword('Refinement-Test-123'),height:175,activityLevel:'light',trainingLevel:'beginner',trainingLocation:'home',preferences:JSON.stringify({primaryGoal:'lose',planningConfirmed:true}),currentWeight:80,targetWeight:75,timeframeWeeks:26}});ids.push(a.id)
  const b=await prisma.user.create({data:{name:'Refine B',email:`refine-b-${Date.now()}@example.invalid`,password:await hashPassword('Refinement-Test-123')}});ids.push(b.id)
  identity=a.id
  const week=await actions.getWeeklyPlan()

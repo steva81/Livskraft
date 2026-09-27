@@ -1,3 +1,4 @@
+import { readinessLabels } from "./profile-readiness"
 import { goalLabels, goalGuidance, type PrimaryGoal } from "./nutrition"
 import type { dailyNutritionForUser } from "./daily-nutrition"
 import { translate } from "./i18n/catalog"
@@ -12,6 +13,7 @@ import { workoutFits, workoutInstructions, type WorkoutCandidate } from "./train
 type CoachRecipe = { id:string; title:string; ingredients:string; tags:string; prepTime:number }
 export interface CoachContext {
   primaryGoal?: PrimaryGoal; nutrition?: Awaited<ReturnType<typeof dailyNutritionForUser>>
+  readiness?: {ready:boolean;missing:(keyof typeof readinessLabels.sv)[]}
   goal?: GoalInput
   health?: string; language?: string; budget?: string; workSchedule?: string
   userName:string; restrictions:string[]; dislikedFoods:string[]; stepGoal:number; stepsToday?:number
@@ -73,6 +75,7 @@ export async function getCoachReply(input:string,ctx:CoachContext, recentHistory
   const safetyInput = isFollowUp(input) ? `${history.filter(m=>m.role==="user").at(-1)?.text ?? ""} ${input}` : input
   const safety = ctx.goal ? savedGoalSafety(ctx.goal) : null
   if (safety?.level === "blocked") return en ? `${translate(safety.message,"en")} Edit your goal in My Plan. Coach cannot bypass this limit.` : `${safety.message} Ändra målet under Min plan. Coach kan inte kringgå denna gräns.`
+  if (ctx.readiness && !ctx.readiness.ready && coachIntent(input)!=="medical") return en?`I can help already, but your personalized plan needs: ${ctx.readiness.missing.map(k=>readinessLabels.en[k]).join(", ")}. Complete My Plan. Meanwhile, general guidance is to eat regular meals, include a protein source and fibre-rich foods that fit your allergies, and move at a comfortable pace. No default meal or workout is a personal recommendation yet.`:`Jag kan hjälpa dig redan nu, men din personliga plan behöver: ${ctx.readiness.missing.map(k=>readinessLabels.sv[k]).join(", ")}. Komplettera Min plan. Allmän vägledning under tiden är regelbundna måltider, en proteinkälla och fiberrik mat inom dina allergier samt rörelse i behaglig takt. Standardmåltider och pass är ännu inte personliga rekommendationer.`
   const nutrition=ctx.nutrition, target=nutrition?.target
   const goalText=ctx.primaryGoal ? goalLabels[en?"en":"sv"][ctx.primaryGoal]+". "+goalGuidance(ctx.primaryGoal,en) : ""
   const dangerous=/insulin|dos(?:e|ing)?|medicin|medication|diagnos|treat|behandl|fasta|fasting|starv|svält|straff|punish|skip.*meal|hoppa över/i.test(safetyInput)

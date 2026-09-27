@@ -1,4 +1,5 @@
 "use client"
+import {ProfileReadinessCard} from "@/components/profile-readiness"
 import { bodyLabels } from "@/lib/body-data"
 import { GoalSummary } from "@/components/goal-summary"
 import { Localize, useLanguage } from "@/lib/i18n/provider"
@@ -28,7 +29,7 @@ export default function ProfilePage() {
   }
   const groups = [
     {title:"Dina mål", rows:[
-      ["Personligt stegmål", `${user.stepGoal.toLocaleString(language==="en"?"en-GB":"sv-SE")} steg`],
+      [preferences?.planningConfirmed?"Personligt stegmål":(language==="en"?"Unconfirmed step suggestion":"Obekräftat stegförslag"), `${user.stepGoal.toLocaleString(language==="en"?"en-GB":"sv-SE")} steg`],
       ["Nuvarande vikt", user.currentWeight == null ? "Ej angivet" : `${user.currentWeight.toLocaleString(language==="en"?"en-GB":"sv-SE")} kg`],
       ["Målvikt", user.targetWeight == null ? "Ej angivet" : `${user.targetWeight.toLocaleString(language==="en"?"en-GB":"sv-SE")} kg`],
       ["Tidsram", user.timeframeWeeks == null ? "Ej angivet" : formatTimeframe(user.timeframeWeeks)],
@@ -54,7 +55,7 @@ export default function ProfilePage() {
     ]},
   ]
   return <Localize>{<div className="max-w-3xl mx-auto space-y-6">
-      <GoalSummary />
+      <GoalSummary /><ProfileReadinessCard user={user}/>{!preferences?.planningConfirmed&&<p data-localize="off" className="rounded bg-amber-50 p-4">{language==="en"?"The stored activity, training and daily-life values below may include starting suggestions. Review and confirm them in My Plan before they are used for personal recommendations.":"Sparade aktivitets-, tränings- och vardagsvärden nedan kan innehålla startförslag. Granska och bekräfta dem i Min plan innan de används för personliga rekommendationer."}</p>}
       <div data-localize="off" className="border rounded p-4"><p>{bodyLabels[language].year}: {preferences?.birthYear??"—"}</p><p>{bodyLabels[language].sex}: {bodyLabels[language][preferences?.sexForEnergy??"undisclosed"]}</p></div>
     <div><h1 className="text-3xl font-bold">Min profil</h1><p className="text-muted-foreground">Din sparade profil och dina vardagsval.</p></div>
     <Card><CardHeader><CardTitle>{user.name}</CardTitle><CardDescription>{user.email}</CardDescription></CardHeader><CardContent>

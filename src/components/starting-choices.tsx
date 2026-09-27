@@ -1,0 +1,15 @@
+"use client"
+import { useLanguage } from "@/lib/i18n/provider"
+import { type Preferences } from "@/lib/preferences"
+import { SlotChoices } from "./planning-preferences"
+export function StartingChoices({value,onChange}:{value:Preferences;onChange:(p:Preferences)=>void}) {
+  const {language}=useLanguage(),en=language==="en"
+  return <section data-localize="off" className="space-y-3 rounded-xl border p-4"><h3 className="font-semibold">{en?"Your starting suggestions":"Dina startförslag"}</h3><p className="text-sm">{en?"These are suggestions, not things we know about you. Review them, change what you need, then confirm.":"Det här är förslag, inte uppgifter vi vet om dig. Granska, ändra det du vill och bekräfta sedan."}</p>
+  <div className="grid gap-3 sm:grid-cols-2">{(["dailySteps","cookingMinutes","trainingDays","workoutMinutes"] as const).map((key,i)=><label key={key} className="text-sm">{(en?["Typical steps/day","Cooking time (min)","Training days/week","Workout time (min)"]:["Ungefärliga steg/dag","Matlagningstid (min)","Träningsdagar/vecka","Tid per pass (min)"])[i]}<input className="w-full rounded border p-2" type="number" min={[0,5,0,10][i]} max={[50000,180,5,120][i]} value={value[key]} onChange={e=>onChange({...value,[key]:Number(e.target.value),planningConfirmed:false})}/></label>)}</div>
+  <p className="text-sm">{en?"Suggested step goal after confirmation":"Föreslaget stegmål efter bekräftelse"}: {Math.min(12000,Math.max(2000,value.dailySteps+1000))}</p>
+  <label className="block text-sm">{en?"Equipment":"Utrustning"}<input className="w-full rounded border p-2" value={value.equipment} onChange={e=>onChange({...value,equipment:e.target.value,planningConfirmed:false})}/></label>
+  <label className="block text-sm">{en?"Food budget":"Matbudget"}<select className="w-full rounded border p-2" value={value.budget} onChange={e=>onChange({...value,budget:e.target.value,planningConfirmed:false})}>{["low","normal","high"].map((v,i)=><option key={v} value={v}>{(en?["Low","Standard","High"]:["Låg","Normal","Hög"])[i]}</option>)}</select></label>
+  <label className="block text-sm">{en?"Work schedule":"Arbetstider"}<select className="w-full rounded border p-2" value={value.workSchedule} onChange={e=>onChange({...value,workSchedule:e.target.value,planningConfirmed:false})}>{["dagtid","kvall","natt","skift","oregelbundet"].map((v,i)=><option key={v} value={v}>{(en?["Daytime","Evening","Night","Shifts","Irregular"]:["Dagtid","Kväll","Natt","Skift","Oregelbundet"])[i]}</option>)}</select></label>
+  <fieldset><legend>{en?"Planned meals":"Planerade måltider"}</legend><SlotChoices value={value.mealSlots} onChange={mealSlots=>onChange({...value,mealSlots,planningConfirmed:false})}/></fieldset>
+  <label className="flex min-h-12 items-start gap-3 rounded-lg bg-emerald-50 p-3"><input className="mt-1" type="checkbox" checked={value.planningConfirmed===true} onChange={e=>onChange({...value,planningConfirmed:e.target.checked})}/><span>{en?"Use these reviewed choices for my plan. I can change them later.":"Använd dessa granskade val i min plan. Jag kan ändra dem senare."}</span></label></section>
+}

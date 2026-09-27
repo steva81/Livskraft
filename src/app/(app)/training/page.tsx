@@ -1,4 +1,7 @@
 "use client"
+import {profileReadiness} from "@/lib/profile-readiness"
+import {ProfileReadinessCard} from "@/components/profile-readiness"
+import type {PublicUser} from "@/app/actions"
 import { GoalSummary } from "@/components/goal-summary"
 import { Localize, useLanguage } from "@/lib/i18n/provider"
 
@@ -21,6 +24,8 @@ import { workoutFits } from "@/lib/training"
 export default function TrainingPage() {
   const {language}=useLanguage()
   const { mode, userId, sessionStatus } = useMode()
+  const [user,setUser]=useState<PublicUser|null>(null)
+  const ready=!!user&&profileReadiness(user).ready
   const [activeTab, setActiveTab] = useState<"plan" | "log">("plan")
   const [placeFilter, setPlaceFilter] = useState<"all" | "home" | "gym">("all")
   const [showShort, setShowShort] = useState(false)
@@ -36,12 +41,13 @@ export default function TrainingPage() {
   useEffect(() => {
     if (sessionStatus === "loading") return
     Promise.all([getWorkouts(), getWorkoutLogs(), getUser()]).then(([w, l, u]) => {
+      setUser(u)
       setWorkouts(w)
       setLogs(l)
       setPreferredLevel(u?.trainingLevel ?? "beginner")
       setPreferences(readPreferences(u?.preferences??null))
       setPreferredPlace(u?.trainingLocation ?? "both")
-      if (u?.trainingLocation === "home" || u?.trainingLocation === "gym") {
+      if (u && profileReadiness(u).ready && (u.trainingLocation === "home" || u.trainingLocation === "gym")) {
         setPlaceFilter(u.trainingLocation)
         setPreferredPlace(u.trainingLocation)
       }
@@ -77,13 +83,13 @@ export default function TrainingPage() {
 
   return <Localize>{(
     <div className="max-w-4xl mx-auto space-y-6">
-      <GoalSummary />
+      <GoalSummary />{user&&<ProfileReadinessCard user={user}/>}
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Träning</h1>
         <p className="text-muted-foreground">
           Styrkepass hemma eller på gym — separat från steg och promenader.
         </p>
-        <p className="text-sm text-muted-foreground mt-2">Utrustning hemma: {preferences.equipment}. Gym innebär vanliga gymmaskiner och fria vikter. Du kan bläddra bland alla nivåer; rekommenderade pass passar din profil och tidsbudget.</p>
+        {ready&&<p className="text-sm text-muted-foreground mt-2">Utrustning hemma: {preferences.equipment}. Gym innebär vanliga gymmaskiner och fria vikter. Du kan bläddra bland alla nivåer; rekommenderade pass passar din profil och tidsbudget.</p>}
       </div>
 
       <div className="flex gap-4 border-b">
@@ -148,7 +154,7 @@ export default function TrainingPage() {
               {visible.map((workout) => {
                 const exercises = JSON.parse(workout.exercises ?? "[]") as Exercise[]
                 const done = isCompletedToday(workout.id)
-                const recommended = (preferredPlace === "both" || workout.type === preferredPlace) && workoutFits(workout,preferredLevel,preferences.equipment,preferences.workoutMinutes)
+                const recommended = ready && (preferredPlace === "both" || workout.type === preferredPlace) && workoutFits(workout,preferredLevel,preferences.equipment,preferences.workoutMinutes)
                 return <Localize key={workout.id}>{(
                   <Card key={workout.id} className={done ? "opacity-75" : ""}>
                     <CardHeader className="pb-3">

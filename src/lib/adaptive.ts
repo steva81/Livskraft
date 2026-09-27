@@ -1,3 +1,4 @@
+import { profileReadiness } from "./profile-readiness"
 import { savedGoalSafety } from "./goal-safety"
 import prisma from "./prisma"
 import { startOfWeekMonday } from "./plan-types"
@@ -17,7 +18,7 @@ export async function adaptiveStateForUser(userId: string): Promise<AdaptiveStat
   const targetStart = startOfWeekMonday(today); targetStart.setDate(targetStart.getDate()+7)
   const base: AdaptiveState = { status:"insufficient", targetStart, reason:"Vi har ännu för lite data för att göra en meningsfull anpassning. Fortsätt logga några dagar så får du ett bättre förslag.", changes:[], unchanged:"Måltider, kostregler, träningsdagar och personligt stegmål behålls.", evidenceDays:0, key:"" }
   const user = await prisma.user.findUnique({where:{id:userId}})
-  if (!user) return base
+  if (!user || !profileReadiness(user).ready) return base
   const safety = savedGoalSafety(user)
   if (safety?.level === "blocked") return { ...base, reason: safety.message }
   const stored = await prisma.adaptiveDecision.findUnique({where:{userId_targetStart:{userId,targetStart}}})

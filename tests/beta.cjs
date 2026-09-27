@@ -49,7 +49,7 @@ async function main() {
   const email = `beta-test-${Date.now()}@example.invalid`
   await check('onboarding validates goal and stores hash/preferences', async () => {
     assert.equal((await actions.submitOnboarding({ email, password:'test-password-123', currentWeight:80, targetWeight:60, timeframeWeeks:4 })).success, false)
-    assert.equal((await actions.submitOnboarding({ email, password:'test-password-123', currentWeight:80, targetWeight:75, timeframeWeeks:12, height:175, waist:90, dietRestrictions:['vegetarian','lactose-free','allergy:nötter'], trainingLocation:'home', preferences:{...defaultPreferences, trainingDays:2, workoutMinutes:20} })).success, true)
+    assert.equal((await actions.submitOnboarding({ name:'Beta test', activityLevel:'light',trainingLevel:'beginner',email, password:'test-password-123', currentWeight:80, targetWeight:75, timeframeWeeks:12, height:175, waist:90, dietRestrictions:['vegetarian','lactose-free','allergy:nötter'], trainingLocation:'home', preferences:{...defaultPreferences, primaryGoal:"lose",planningConfirmed:true,trainingDays:2, workoutMinutes:20} })).success, true)
     const user = await prisma.user.findUnique({where:{email}})
     ids.push(user.id); identity = user.id
     assert(user.password.startsWith('scrypt:'))
@@ -123,8 +123,9 @@ async function main() {
     assert.equal((await actions.getAdaptiveWeek()).status,"insufficient")
     assert.equal((await actions.getWorkoutLogs()).length,0)
     const plan=await actions.getWeeklyPlan()
-    assert.equal(plan.planDays.length,7)
-    assert(plan.planDays.every(d=>parsePlannedMeals(d.meals).length===0))
+    assert.equal(plan,null)
+    await prisma.user.update({where:{id:user.id},data:{currentWeight:80,height:175,activityLevel:'light',trainingLevel:'beginner',trainingLocation:'home',preferences:JSON.stringify({...defaultPreferences,primaryGoal:'maintain',planningConfirmed:true})}})
+    assert((await actions.getWeeklyPlan()).planDays.every(d=>parsePlannedMeals(d.meals).length===0))
     assert.equal((await actions.getShoppingList()).length,0)
     const today=new Date();today.setHours(0,0,0,0)
     for(let i=1;i<=8;i++){const date=new Date(today);date.setDate(date.getDate()-i);await prisma.dailyLog.create({data:{userId:identity,date,steps:900,stepsRecorded:true}})}

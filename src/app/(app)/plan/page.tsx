@@ -1,4 +1,6 @@
 "use client"
+import {profileReadiness} from "@/lib/profile-readiness"
+import {ProfileReadinessCard} from "@/components/profile-readiness"
 import { GoalSummary } from "@/components/goal-summary"
 import { Localize, useLanguage } from "@/lib/i18n/provider"
 
@@ -66,6 +68,7 @@ export default function WeeklyPlanPage() {
     return <Localize>{<div className="p-8 text-center text-muted-foreground">Laddar veckoplan...</div>}</Localize>
   }
 
+  if(user&&!profileReadiness(user).ready)return <ProfileReadinessCard user={user}/>
   const safety = user ? savedGoalSafety(user) : null
   if (safety?.level === "blocked") return <Localize>{<div role="alert" className="space-y-3 rounded border p-4"><p>{safety.message}</p><Link className="underline" href="/my-plan">Ändra målet i Min plan</Link></div>}</Localize>
 

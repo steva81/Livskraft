@@ -12,6 +12,8 @@ import { getUser, getTodayData, setDailySteps, completeMeal, getTodayPlanContext
 import type { PublicUser } from "@/app/actions"
 import type { DailyLog, Workout } from "@prisma/client"
 import type { PlannedMeal } from "@/lib/plan-types"
+import { profileReadiness } from "@/lib/profile-readiness"
+import { ProfileReadinessCard } from "@/components/profile-readiness"
 import Link from "next/link"
 import { DailyNutrition } from "@/components/daily-nutrition"
 
@@ -60,6 +62,7 @@ export default function DashboardPage() {
     return <Localize>{<div className="p-8 text-center text-muted-foreground">Kunde inte ladda din dag. Logga in igen.</div>}</Localize>
   }
 
+  if(!profileReadiness(user).ready)return <div className="mx-auto max-w-3xl space-y-5"><h1 className="text-3xl font-bold">{language==="en"?"Today":"Idag"}</h1><ProfileReadinessCard user={user}/><p>{language==="en"?"General guidance: eat regularly and make room for rest. Your own meals can still be logged below.":"Allmän vägledning: ät regelbundet och ge plats för vila. Du kan fortfarande registrera egen mat nedan."}</p><DailyNutrition/></div>
   const goalSafety = savedGoalSafety(user)
   const stepProgress = Math.min((todayLog.steps / user.stepGoal) * 100, 100)
   const eaten = (() => {
@@ -76,7 +79,7 @@ export default function DashboardPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Idag</h1>
-          <p className="text-muted-foreground">Välkommen tillbaka, {user.name.split(" ")[0]}!</p>
+          <p className="text-muted-foreground">{language==="en"?"Your day, at your pace.":"Din dag, i din takt."}</p>
         </div>
       </div>
 

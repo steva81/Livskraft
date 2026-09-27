@@ -3,6 +3,10 @@ import { recipeTextEn } from "./recipe-content"
 // Source-key catalog: Swedish source strings are stable keys; stored enums never change.
 export type Language = "sv" | "en"
 export const english: Record<string,string> = {
+  "Hem": "Home",
+  "Komplettera Min plan först": "Complete My Plan first",
+  "Ange aktuell vikt under Kropp och grunddata först.": "Enter your current weight in Body and baseline data first.",
+  "Målvikten behöver stämma med ditt mål.": "Target weight must match your goal.",
   "Vikt": "Weight",
   "Midja": "Waist",
   "Ändra målet i Min plan": "Edit the goal in My Plan",

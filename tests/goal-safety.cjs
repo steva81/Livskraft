@@ -34,8 +34,8 @@ async function main() {
     if(result.suggestedWeeks) assert.equal(assessGoal(goal(100,80,result.suggestedWeeks)).level,'normal')
   }
   console.log('PASS pace boundaries, gain/loss, invalid input and normalized months')
-  const first=await prisma.user.create({data:{name:'Goal test',email:`goal-${Date.now()}@example.invalid`,...goal(80,75,12)}});ids.push(first.id)
-  const second=await prisma.user.create({data:{name:'Other goal',email:`goal-other-${Date.now()}@example.invalid`,...goal(90,85,12)}});ids.push(second.id)
+  const first=await prisma.user.create({data:{name:'Goal test',email:`goal-${Date.now()}@example.invalid`,height:175,activityLevel:'light',trainingLevel:'beginner',trainingLocation:'home',preferences:JSON.stringify({primaryGoal:'lose',planningConfirmed:true}),...goal(80,75,12)}});ids.push(first.id)
+  const second=await prisma.user.create({data:{name:'Other goal',email:`goal-other-${Date.now()}@example.invalid`,height:175,activityLevel:'light',trainingLevel:'beginner',trainingLocation:'home',preferences:JSON.stringify({primaryGoal:'lose',planningConfirmed:true}),...goal(90,85,12)}});ids.push(second.id)
   identity=first.id
   const existing=await generateWeeklyPlanForUser(first.id)
   assert(existing)

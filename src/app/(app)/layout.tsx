@@ -10,19 +10,19 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   if (!await getAuthenticatedUserId()) redirect("/login")
   return <Localize>{(
     <ModeProvider>
-      <div className="flex h-screen bg-gray-50/50">
+      <div className="flex h-[100dvh] bg-gray-50/50">
         {/* Desktop Sidebar */}
         <aside className="hidden lg:flex w-64 shrink-0 flex-col border-r bg-white">
           <div className="h-16 flex items-center px-6 border-b">
-            <Link href="/dashboard" className="flex items-center gap-2 font-bold text-xl text-primary">
+            <Link href="/home" className="flex items-center gap-2 font-bold text-xl text-primary">
               Livskraft
             </Link>
           </div>
           <nav className="flex-1 overflow-y-auto py-4">
             <ul className="space-y-1 px-3">
               <li>
-                <Link href="/dashboard" className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium hover:bg-gray-100">
-                  <Home className="h-4 w-4" /> Idag
+                <Link href="/home" className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium hover:bg-gray-100">
+                  <Home className="h-4 w-4" /> Hem
                 </Link>
               </li>
               <li>
@@ -63,23 +63,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
         {/* Main content */}
         <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
-          {/* Mobile Header */}
-          <header className="lg:hidden h-14 shrink-0 border-b bg-white flex items-center justify-between px-4">
-            <Link href="/dashboard" className="font-bold text-lg text-primary">
-              Livskraft
-            </Link>
-            <Link href="/meals" className="inline-flex min-h-11 min-w-11 items-center justify-center text-sm">Recept</Link>
-            <Link href="/progress" className="inline-flex min-h-11 min-w-11 items-center justify-center text-sm">Framsteg</Link>
-            <Link href="/profile" className="inline-flex min-h-11 min-w-11 items-center justify-center text-sm">Profil</Link>
-          </header>
-
-          <nav className="lg:hidden flex flex-wrap gap-x-5 px-4 bg-white border-b text-sm"><Link className="py-3" href="/my-plan">Min plan</Link><Link className="py-3" href="/account">Kontoinställningar</Link></nav>
           <div className="flex-1 overflow-y-auto p-4 md:p-8"><ModeControl />{children}</div>
 
           {/* Mobile Nav */}
           <nav className="lg:hidden shrink-0 border-t bg-white flex items-center justify-around h-16">
-            <Link href="/dashboard" className="flex flex-col items-center p-2 text-xs text-gray-500 hover:text-primary">
-              <Home className="h-5 w-5 mb-1" /> Idag
+            <Link href="/home" className="flex flex-col items-center p-2 text-xs text-gray-500 hover:text-primary">
+              <Home className="h-5 w-5 mb-1" /> Hem
             </Link>
             <Link href="/plan" className="flex flex-col items-center p-2 text-xs text-gray-500 hover:text-primary">
               <ListChecks className="h-5 w-5 mb-1" /> Plan

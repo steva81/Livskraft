@@ -4,6 +4,7 @@ export default withAuth({ pages: { signIn: "/login" } })
 
 export const config = {
   matcher: [
+    "/home/:path*",
     "/my-plan/:path*",
     "/account/:path*",
     "/dashboard/:path*",

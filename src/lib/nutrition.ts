@@ -1,3 +1,4 @@
+import { profileReadiness } from "./profile-readiness"
 import { readPreferences } from "./preferences"
 import { savedGoalSafety } from "./goal-safety"
 import { ageFromBirthYear } from "./body-data"
@@ -8,14 +9,14 @@ export const goalLabels = {
   sv: { lose: "Gå ner i vikt", maintain: "Behålla vikten", "retain-muscle": "Behålla vikt och muskelmassa", "build-muscle": "Bygga muskler" },
   en: { lose: "Lose weight", maintain: "Maintain weight", "retain-muscle": "Maintain weight and muscle mass", "build-muscle": "Build muscle" },
 }
-type Profile = { preferences: string | null; currentWeight: number | null; height?: number | null; activityLevel?: string | null; targetWeight?: number | null; timeframeWeeks?: number | null }
+type Profile = { trainingLevel?: string | null; trainingLocation?: string | null; preferences: string | null; currentWeight: number | null; height?: number | null; activityLevel?: string | null; targetWeight?: number | null; timeframeWeeks?: number | null }
 export function primaryGoal(user: Profile): PrimaryGoal {
   const p = readPreferences(user.preferences)
   return p.primaryGoal ?? (user.targetWeight != null && user.currentWeight != null ? user.targetWeight < user.currentWeight ? "lose" : user.targetWeight > user.currentWeight ? "build-muscle" : "maintain" : "maintain")
 }
 export function nutritionTarget(user: Profile, recentSteps?: number) {
   const p = readPreferences(user.preferences), goal = primaryGoal(user), weight = user.currentWeight
-  if (!weight || weight < 30 || weight > 250 || savedGoalSafety(user)?.level === "blocked") return null
+  if (!profileReadiness(user).ready || !weight || weight < 30 || weight > 250 || savedGoalSafety(user)?.level === "blocked") return null
   // Mifflin–St Jeor requires age, height and physiological sex coefficient.
   // Without these, 30 kcal/kg is only a broad planning heuristic, not a BMR formula.
   const age = ageFromBirthYear(p.birthYear)

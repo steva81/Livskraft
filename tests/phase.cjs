@@ -30,8 +30,8 @@ const {translate}=require('../src/lib/i18n/catalog')
 const {recipeMeetsConstraints}=require('../src/lib/dietary')
 const {expandedRecipes}=require('../prisma/expanded-recipes')
 async function main(){
-  const first=await prisma.user.create({data:{name:'Phase A',email:`phase-a-${Date.now()}@example.invalid`,...goal(80,75,12)}});ids.push(first.id)
-  const second=await prisma.user.create({data:{name:'Phase B',email:`phase-b-${Date.now()}@example.invalid`,...goal(90,85,12)}});ids.push(second.id)
+  const first=await prisma.user.create({data:{name:'Phase A',email:`phase-a-${Date.now()}@example.invalid`,height:175,activityLevel:'light',trainingLevel:'beginner',trainingLocation:'home',preferences:JSON.stringify({primaryGoal:'lose',planningConfirmed:true}),...goal(80,75,12)}});ids.push(first.id)
+  const second=await prisma.user.create({data:{name:'Phase B',email:`phase-b-${Date.now()}@example.invalid`,height:175,activityLevel:'light',trainingLevel:'beginner',trainingLocation:'home',preferences:JSON.stringify({primaryGoal:'lose',planningConfirmed:true}),...goal(90,85,12)}});ids.push(second.id)
   identity=first.id
   await actions.savePreferences({health:'type1',workSchedule:'kvall',budget:'high',language:'en',trackedMeasurements:['hip','arm'],mealSlots:['Lunch','Middag','Mellanmål']})
   let prefs=readPreferences((await actions.getUser()).preferences)
