@@ -4,13 +4,13 @@
 
 @layer base {
   :root {
-    --background: 140 10% 98%; /* Soft off-white with hint of green */
+    --background: 45 25% 97%; /* Warm neutral canvas */
     --foreground: 140 5% 10%;
     --card: 0 0% 100%;
     --card-foreground: 140 5% 10%;
     --popover: 0 0% 100%;
     --popover-foreground: 140 5% 10%;
-    --primary: 152 40% 40%; /* Sage green */
+    --primary: 155 43% 29%; /* Deep Livskraft green for readable white labels */
     --primary-foreground: 0 0% 100%;
     --secondary: 140 10% 90%;
     --secondary-foreground: 140 10% 20%;
@@ -22,8 +22,8 @@
     --destructive-foreground: 0 0% 98%;
     --border: 140 10% 90%;
     --input: 140 10% 90%;
-    --ring: 152 40% 40%;
-    --radius: 0.75rem;
+    --ring: 155 43% 29%;
+    --radius: 1rem;
   }
 
   .dark {
@@ -56,4 +56,26 @@
   body {
     @apply bg-background text-foreground font-sans antialiased;
   }
+}
+
+@layer base {
+  h1 { text-wrap: balance; }
+  p, h2, h3 { overflow-wrap: anywhere; }
+  :where(a, button, input, select, textarea, summary):focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 3px; }
+  input:not([type="checkbox"]):not([type="radio"]):not([type="file"]), select, textarea { min-height: 2.75rem; border-radius: .75rem; background-color: hsl(var(--card)); max-width: 100%; font-size: 1rem; }
+  summary { cursor: pointer; padding-block: .75rem; font-weight: 500; }
+  ::selection { background: #dcebe2; color: #174d3d; }
+}
+@layer components {
+  .app-scroll { scrollbar-gutter: stable; }
+  .app-sidebar a { min-height: 44px; border-radius: .75rem; }
+  .app-sidebar a[aria-current="page"] { background: #eaf2ec; color: #245d47; }
+  .mobile-nav { height: auto; min-height: 72px; padding: 6px 8px max(6px, env(safe-area-inset-bottom)); box-shadow: 0 -4px 24px #203c2d06; }
+  .mobile-nav a { min-height: 52px; min-width: 64px; border-radius: 14px; font-weight: 500; }
+  .mobile-nav a[aria-current="page"] { background: #eaf2ec; color: #245d47; }
+  .nutrition-panel dl > div { border-radius: 14px; padding: 14px; background: #f3f6f2; }
+  .nutrition-panel dd { margin-top: 6px; font-size: 1.125rem; font-variant-numeric: tabular-nums; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
 }

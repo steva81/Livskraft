@@ -83,7 +83,6 @@ export default function TrainingPage() {
 
   return <Localize>{(
     <div className="max-w-4xl mx-auto space-y-6">
-      <GoalSummary />{user&&<ProfileReadinessCard user={user}/>}
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Träning</h1>
         <p className="text-muted-foreground">
@@ -92,15 +91,18 @@ export default function TrainingPage() {
         {ready&&<p className="text-sm text-muted-foreground mt-2">Utrustning hemma: {preferences.equipment}. Gym innebär vanliga gymmaskiner och fria vikter. Du kan bläddra bland alla nivåer; rekommenderade pass passar din profil och tidsbudget.</p>}
       </div>
 
+      <GoalSummary />{user&&<ProfileReadinessCard user={user}/>}
       <div className="flex gap-4 border-b">
         <button
-          className={`pb-2 font-medium ${activeTab === "plan" ? "border-b-2 border-primary text-primary" : "text-muted-foreground"}`}
+          aria-pressed={activeTab === "plan"}
+          className={`min-h-11 pb-2 font-medium ${activeTab === "plan" ? "border-b-2 border-primary text-primary" : "text-muted-foreground"}`}
           onClick={() => setActiveTab("plan")}
         >
           Pass att välja bland
         </button>
         <button
-          className={`pb-2 font-medium ${activeTab === "log" ? "border-b-2 border-primary text-primary" : "text-muted-foreground"}`}
+          aria-pressed={activeTab === "log"}
+          className={`min-h-11 pb-2 font-medium ${activeTab === "log" ? "border-b-2 border-primary text-primary" : "text-muted-foreground"}`}
           onClick={() => setActiveTab("log")}
         >
           Träningslogg
@@ -156,7 +158,7 @@ export default function TrainingPage() {
                 const done = isCompletedToday(workout.id)
                 const recommended = ready && (preferredPlace === "both" || workout.type === preferredPlace) && workoutFits(workout,preferredLevel,preferences.equipment,preferences.workoutMinutes)
                 return <Localize key={workout.id}>{(
-                  <Card key={workout.id} className={done ? "opacity-75" : ""}>
+                  <Card key={workout.id} className={done ? "border-primary/30 bg-[#f6f9f3]" : ""}>
                     <CardHeader className="pb-3">
                       <div className="flex justify-between items-start">
                         <div>
@@ -168,20 +170,21 @@ export default function TrainingPage() {
                             )}
                             {workout.title}
                           </CardTitle>
-                          <CardDescription className="flex items-center gap-1 mt-1">
+                          <CardDescription className="flex flex-wrap items-center gap-2 mt-3">
                             <Clock className="w-4 h-4" /> {workout.duration} minuter
                             {" · "}
                             {displayValue(workout.level)}
-                            {recommended ? " · rekommenderad" : ""}
+                            <span className="rounded-full bg-muted px-2 py-1 text-xs">{displayValue(workout.type)}</span>{recommended && <span className="rounded-full bg-primary/10 px-2 py-1 text-xs font-medium text-primary">{language==="en"?"Recommended":"Rekommenderad"}</span>}
                           </CardDescription>
+                          <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{exercises.slice(0,2).map((ex,index)=><span key={index}>{index > 0 && " · "}{ex.name}</span>)}</p>
                         </div>
                         {done && <CheckCircle2 className="w-6 h-6 text-primary shrink-0" />}
                       </div>
                     </CardHeader>
                     <CardContent>
-                      <div className="space-y-2 mb-4">
+                      <details className="mb-4 rounded-xl border bg-background/60 px-3"><summary>{language==="en"?"Exercises & instructions":"Övningar & instruktioner"} <span className="text-muted-foreground">({exercises.length})</span></summary><div className="space-y-3 pb-3">
                         {exercises.map((ex, idx) => (
-                          <div key={idx} className="flex flex-wrap justify-between gap-x-3 text-sm">
+                          <div key={idx} className="flex flex-wrap justify-between gap-2 border-t pt-3 text-sm">
                             <span>{ex.name}</span>
                             <ExerciseHelp exercise={ex}/>
                             {mode === "advanced" ? (
@@ -194,7 +197,7 @@ export default function TrainingPage() {
                             )}
                           </div>
                         ))}
-                      </div>
+                      </div></details>
                       <Button className="w-full" disabled={done || savingId !== null} onClick={() => handleLogWorkout(workout.id)}>
                         {done ? "Passet avklarat" : "Markera som klar"}
                       </Button>

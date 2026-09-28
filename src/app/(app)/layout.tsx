@@ -1,6 +1,6 @@
 import { Localize } from "@/lib/i18n/provider"
-import Link from "next/link"
-import { Home, CalendarDays, Dumbbell, LineChart, MessageCircle, User, ListChecks } from "lucide-react"
+import { NavigationLink as Link } from "@/components/navigation-link"
+import { Home, Utensils, CalendarDays, Dumbbell, LineChart, MessageCircle, User, ListChecks } from "lucide-react"
 import { ModeProvider } from "@/lib/ModeContext"
 import { getAuthenticatedUserId } from "@/lib/auth"
 import { redirect } from "next/navigation"
@@ -10,21 +10,22 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   if (!await getAuthenticatedUserId()) redirect("/login")
   return <Localize>{(
     <ModeProvider>
-      <div className="flex h-[100dvh] bg-gray-50/50">
+      <div className="flex h-[100dvh] bg-background">
         {/* Desktop Sidebar */}
-        <aside className="hidden lg:flex w-64 shrink-0 flex-col border-r bg-white">
-          <div className="h-16 flex items-center px-6 border-b">
+        <aside className="app-sidebar hidden lg:flex w-64 shrink-0 flex-col border-r bg-white">
+          <div className="h-24 flex items-center px-6">
             <Link href="/home" className="flex items-center gap-2 font-bold text-xl text-primary">
               Livskraft
             </Link>
           </div>
-          <nav className="flex-1 overflow-y-auto py-4">
+          <nav className="flex-1 overflow-y-auto py-5">
             <ul className="space-y-1 px-3">
               <li>
                 <Link href="/home" className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium hover:bg-gray-100">
                   <Home className="h-4 w-4" /> Hem
                 </Link>
               </li>
+              <li><Link href="/dashboard" className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium hover:bg-gray-100"><Utensils className="h-4 w-4" /> Idag</Link></li>
               <li>
                 <Link href="/plan" className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium hover:bg-gray-100">
                   <ListChecks className="h-4 w-4" /> Veckoplan
@@ -50,8 +51,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
                   <MessageCircle className="h-4 w-4" /> Coach
                 </Link>
               </li>
-              <li><Link href="/my-plan" className="block rounded-md px-3 py-2 text-sm font-medium">Min plan</Link></li>
-              <li><Link href="/account" className="block rounded-md px-3 py-2 text-sm font-medium">Kontoinställningar</Link></li>
+              <li className="!mt-6 border-t pt-4 text-muted-foreground"><Link href="/my-plan" className="block rounded-md px-3 py-2 text-sm font-medium">Min plan</Link></li>
+              <li className="text-muted-foreground"><Link href="/account" className="block rounded-md px-3 py-2 text-sm font-medium">Kontoinställningar</Link></li>
             </ul>
           </nav>
           <div className="border-t p-4">
@@ -63,10 +64,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
         {/* Main content */}
         <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
-          <div className="flex-1 overflow-y-auto p-4 md:p-8"><ModeControl />{children}</div>
+          <div className="app-scroll flex-1 overflow-y-auto p-4 sm:p-6 lg:p-10"><ModeControl />{children}</div>
 
           {/* Mobile Nav */}
-          <nav className="lg:hidden shrink-0 border-t bg-white flex items-center justify-around h-16">
+          <nav className="mobile-nav lg:hidden shrink-0 border-t bg-white flex items-center justify-around h-16">
             <Link href="/home" className="flex flex-col items-center p-2 text-xs text-gray-500 hover:text-primary">
               <Home className="h-5 w-5 mb-1" /> Hem
             </Link>

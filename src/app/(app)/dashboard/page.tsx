@@ -83,7 +83,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <div className="rounded-xl bg-primary/5 p-4 space-y-2"><p>Nästa steg: {meals.find(m => !eaten.includes(`${m.slot}:${m.recipeId}`) && !eaten.includes(m.title))?.title ?? "Fortsätt med rörelse eller återhämtning i din takt."}</p><p className="text-sm">Dagen behöver inte bli perfekt. Fortsätt med nästa vanliga måltid eller pass.</p><Link className="text-primary underline text-sm" href="/meals">Kontrollera veckans ingredienser och inköpslista</Link></div>
+      <div className="rounded-2xl border border-primary/15 bg-[#edf3e9] p-6 space-y-3"><p className="text-lg font-semibold text-primary">Nästa steg: {meals.find(m => !eaten.includes(`${m.slot}:${m.recipeId}`) && !eaten.includes(m.title))?.title ?? "Fortsätt med rörelse eller återhämtning i din takt."}</p><p className="text-sm">Dagen behöver inte bli perfekt. Fortsätt med nästa vanliga måltid eller pass.</p><Link className="text-primary underline text-sm" href="/meals">Kontrollera veckans ingredienser och inköpslista</Link></div>
       <DailyNutrition refreshKey={todayLog.mealsEaten ?? ""} onPlanChanged={async()=>{const day=await getTodayPlanContext();setMeals(day.meals);setWorkout(day.workout);setActivity(day.activity)}} />
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         <Card className="col-span-1 lg:col-span-2">
@@ -101,7 +101,7 @@ export default function DashboardPage() {
             {meals.map((meal) => {
               const done = eaten.includes(`${meal.slot}:${meal.recipeId}`) || eaten.includes(meal.title)
               return <Localize key={`${meal.slot}-${meal.recipeId}`}>{(
-                <div key={`${meal.slot}-${meal.recipeId}`} className="flex items-start gap-4">
+                <div key={`${meal.slot}-${meal.recipeId}`} className="flex items-start gap-4 rounded-xl border bg-background/60 p-4">
                   {done ? (
                     <CheckCircle2 className="h-6 w-6 text-primary shrink-0 mt-0.5" />
                   ) : (

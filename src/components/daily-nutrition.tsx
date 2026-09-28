@@ -24,8 +24,9 @@ export function DailyNutrition({refreshKey = "",onPlanChanged}: {refreshKey?: st
   useEffect(()=>{void refresh().catch(()=>setError(en?"Could not load nutrition.":"Kunde inte läsa näringsöversikten."))},[refreshKey,en])
   useEffect(()=>()=>{if(photo)URL.revokeObjectURL(photo)},[photo])
   const perform=async(action:()=>Promise<void>)=>{setBusy(true);setError("");try{await action();await refresh()}catch(e){setError(e instanceof Error?e.message:t("Kunde inte spara.","Could not save."))}finally{setBusy(false)}}
-  return <section className="rounded-xl border p-4 space-y-4" data-localize="off">
+  return <section className="nutrition-panel rounded-2xl border bg-white p-5 sm:p-6 space-y-4" data-localize="off">
     <h2 className="text-xl font-semibold">{t("Dagens energi och näring","Today's energy and nutrition")}</h2>
+    <Button onClick={()=>{setDraft(blank());setPhoto(null);setPhotoFile(null);setSuggestions([])}}>{t("Lägg till egen måltid","Add own meal")}</Button>
     {data && <>
       {data.target && <p className="text-sm">{bodyLabels[language][data.target.confidence]}</p>}
       {data.ready&&<><p className="font-medium">{goalLabels[language][data.goal]}</p><p>{goalGuidance(data.goal,en)}</p></>}
@@ -39,7 +40,7 @@ export function DailyNutrition({refreshKey = "",onPlanChanged}: {refreshKey?: st
       {(data.consumed.unknown.calories>0||data.consumed.unknown.protein>0)&&<p>{t("Summan är ofullständig: vissa måltider saknar energi eller protein.","Totals are incomplete: some meals have unknown energy or protein.")}</p>}
     </>}
     {mode==="simple" && data?.target && data.consumed.count>0 && data.consumed.unknown.protein===0 && data.consumed.sum.protein<data.target.protein*0.7 && <p>{t("Lite mer protein skulle passa till nästa vanliga måltid om du är hungrig.","A little more protein could fit your next regular meal if you are hungry.")}</p>}
-    <Button onClick={()=>{setDraft(blank());setPhoto(null);setPhotoFile(null);setSuggestions([])}}>{t("Lägg till egen måltid","Add own meal")}</Button>
+
     {draft && <form className="space-y-3 border-t pt-4" onSubmit={e=>{e.preventDefault();void perform(async()=>{await saveOwnMeal({...draft,eatenAt:new Date(draft.eatenAt).toISOString()});setDraft(null);setPhoto(null)})}}>
       <label className="block">{t("Måltidens namn","Meal name")}<input required maxLength={120} className="w-full border rounded p-2" value={draft.name} onChange={e=>setDraft({...draft,name:e.target.value})}/></label>
       <label className="block">{t("Livsmedel och ingredienser","Foods and components")}<textarea maxLength={2000} className="w-full border rounded p-2" value={draft.components} onChange={e=>setDraft({...draft,components:e.target.value})}/></label>

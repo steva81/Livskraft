@@ -141,17 +141,17 @@ function UserCoachPage() {
         {mode === "advanced" && <p className="text-muted-foreground">Kostregler: {overview.restrictions.map(displayValue).join(", ") || "Inga angivna"}. Mat du ogillar: {overview.dislikedFoods.join(", ") || "Inga angivna"}.</p>}
       </CardContent></Card>}
       <Card className="flex flex-col overflow-hidden">
-        <CardContent ref={conversation} role="log" aria-label="Samtal med coachen" aria-live="polite" className="max-h-[50dvh] overflow-y-auto p-4 space-y-4">
+        <CardContent ref={conversation} role="log" aria-label="Samtal med coachen" aria-live="polite" className="min-h-64 max-h-[50dvh] overflow-y-auto p-4 sm:p-6 space-y-5">
           {messages.map((msg) => (
             <div
               key={msg.id}
               className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
             >
               <div
-                className={`max-w-[80%] p-3 rounded-xl text-sm leading-relaxed ${
+                className={`min-w-0 max-w-[92%] sm:max-w-[80%] whitespace-pre-wrap break-words p-4 rounded-2xl text-sm leading-7 ${
                   msg.role === "user"
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted"
+                    ? "bg-primary text-primary-foreground rounded-br-md"
+                    : "bg-[#f1f5ee] rounded-bl-md"
                 }`}
               >
                 {msg.role === "coach" && (
@@ -172,7 +172,7 @@ function UserCoachPage() {
           )}
         </CardContent>
 
-        <CardFooter className="p-3 bg-muted/50 border-t">
+        <CardFooter className="p-3 sm:p-4 bg-white border-t">
           <form onSubmit={handleSubmit} className="flex w-full items-center gap-2">
             <input
               type="text"
@@ -180,10 +180,10 @@ function UserCoachPage() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder="Skriv din fråga…"
-              className="min-w-0 flex-1 bg-white border border-input rounded-md h-10 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              className="min-w-0 flex-1 bg-white border border-input rounded-xl h-12 px-4 text-base focus:outline-none focus:ring-2 focus:ring-ring"
               disabled={loading || !historyReady}
             />
-            <Button type="submit" size="icon" aria-label="Skicka fråga" disabled={loading || !historyReady || !input.trim()}>
+            <Button type="submit" size="icon" className="h-12 w-12" aria-label="Skicka fråga" disabled={loading || !historyReady || !input.trim()}>
               <Send className="h-4 w-4" />
             </Button>
           </form>
@@ -191,22 +191,23 @@ function UserCoachPage() {
       </Card>
 
       {/* Quick-prompt chips */}
-      <p className="text-xs text-muted-foreground">De senaste 50 frågorna och svaren sparas på ditt konto. De senaste 12 meddelandena används som samtalskontext. Undvik att skriva känsliga uppgifter.</p>
-      <Button variant="outline" onClick={async()=>{if(showPrevious){setShowPrevious(false);return}try{const res=await fetch("/api/coach?history=all",{cache:"no-store"});if(!res.ok)throw new Error();setPreviousMessages((await res.json()).messages);setShowPrevious(true)}catch{setHistoryError("Kunde inte läsa historiken. Ladda om sidan för att försöka igen.")}}}>Tidigare samtal</Button>
-      {showPrevious && <section className="rounded border p-4 space-y-3 max-h-96 overflow-auto" aria-label="Tidigare samtal">{previousMessages.length ? previousMessages.map(m=><p key={m.id} data-localize="off" className="text-sm whitespace-pre-wrap"><strong>{m.role==="coach"?"Coach":overview?.name}: </strong>{m.text}</p>) : <p>Ingen tidigare historik.</p>}</section>}
-      <Button variant="outline" onClick={clearHistory} disabled={loading || !historyReady || !hasHistory && messages.length < 2}>Radera historik</Button>
       <div className="grid gap-2 sm:grid-cols-2">
         {QUICK_PROMPTS.map((p) => (
           <button
             key={p}
             onClick={() => sendMessage(translate(p,language))}
             disabled={loading || !historyReady}
-            className="text-sm text-left bg-white border rounded-lg px-3 py-3 hover:bg-gray-50 transition disabled:opacity-50"
+            className="text-sm text-left bg-white border rounded-2xl px-4 py-4 hover:bg-gray-50 transition disabled:opacity-50"
           >
             {p}
           </button>
         ))}
       </div>
+      <p className="text-xs text-muted-foreground">De senaste 50 frågorna och svaren sparas på ditt konto. De senaste 12 meddelandena används som samtalskontext. Undvik att skriva känsliga uppgifter.</p>
+      <Button variant="outline" className="self-start" aria-expanded={showPrevious} onClick={async()=>{if(showPrevious){setShowPrevious(false);return}try{const res=await fetch("/api/coach?history=all",{cache:"no-store"});if(!res.ok)throw new Error();setPreviousMessages((await res.json()).messages);setShowPrevious(true)}catch{setHistoryError("Kunde inte läsa historiken. Ladda om sidan för att försöka igen.")}}}>Tidigare samtal</Button>
+      {showPrevious && <section className="rounded border p-4 space-y-3 max-h-96 overflow-auto" aria-label="Tidigare samtal">{previousMessages.length ? previousMessages.map(m=><p key={m.id} data-localize="off" className="text-sm whitespace-pre-wrap"><strong>{m.role==="coach"?"Coach":overview?.name}: </strong>{m.text}</p>) : <p>Ingen tidigare historik.</p>}</section>}
+      <Button variant="ghost" className="self-start text-muted-foreground" onClick={clearHistory} disabled={loading || !historyReady || !hasHistory && messages.length < 2}>Radera historik</Button>
+
     </div>
   )}</Localize>
 }
