@@ -57,7 +57,7 @@ async function testRejectedInitialLoad(page, path, label, loadingPattern) {
     .click()
 
   // The error disappears when retry starts, so wait for actual page content.
-  await page.locator(".app-scroll .app-page, .app-scroll .max-w-3xl").first()
+  await page.locator(".app-scroll h1").first()
     .waitFor({ state: "visible" })
   assert.equal(await errorBox.count(), 0, `${label}: retry still shows an error`)
   assert.equal(
@@ -110,6 +110,8 @@ async function testRejectedInitialLoad(page, path, label, loadingPattern) {
       "Training",
       /Laddar träningsplan|Loading training/
     )
+
+    await testRejectedInitialLoad(page, "/plan", "Weekly plan", /Laddar veckoplan|Loading weekly/)
 
     console.log("PASS F01 failure/retry regression")
   } finally {

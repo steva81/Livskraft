@@ -475,7 +475,12 @@ export async function completeMeal(slot: string, recipeId: string) {
   const log = await getTodayData()
   if (!log) return
   const recipes = await prisma.recipe.findMany()
-  await prisma.dailyLog.update({ where: { userId_date: { userId, date: todayDate() } }, data: { mealsEaten: recordConsumedMeal(log.mealsEaten, meal, recipes) } })
+  // Read and append atomically so concurrent completions cannot overwrite intake.
+  await prisma.$transaction(async tx => {
+    const where = { userId_date: { userId, date: log.date } }
+    const current = await tx.dailyLog.findUniqueOrThrow({ where })
+    await tx.dailyLog.update({ where, data: { mealsEaten: recordConsumedMeal(current.mealsEaten, meal, recipes) } })
+  })
 }
 
 export async function getCoachContext() {

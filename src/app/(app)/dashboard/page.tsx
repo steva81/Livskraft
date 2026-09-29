@@ -34,6 +34,8 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState("")
   const [retryKey, setRetryKey] = useState(0)
+  const [mealSaving, setMealSaving] = useState(false)
+  const [mealError, setMealError] = useState(false)
 
   useEffect(() => {
     if (sessionStatus === "loading") return
@@ -162,6 +164,7 @@ export default function DashboardPage() {
             <CardDescription>Dina måltider för idag, filtrerade efter dina kostregler</CardDescription><Link href="#daily-nutrition" className="inline-flex min-h-11 items-center self-start rounded-full bg-secondary px-4 text-sm font-medium text-primary">{language==="en"?"Add own meal":"Lägg till egen måltid"}</Link>
           </CardHeader>
           <CardContent className="space-y-4">
+            {mealError && <p role="alert" className="text-sm text-red-700">{language === "en" ? "Could not save the meal. Try again." : "Kunde inte spara måltiden. Försök igen."}</p>}
             {meals.length === 0 && (
               <p className="text-sm text-muted-foreground">Ingen måltidsplan ännu. Öppna Veckoplan för att skapa en.</p>
             )}
@@ -176,7 +179,12 @@ export default function DashboardPage() {
                   )}
                   <div>
                     <p className="font-medium">{meal.title}</p>
-                    {!done && <Button variant="outline" size="sm" onClick={async () => { await completeMeal(meal.slot, meal.recipeId); setTodayLog(await getTodayData()) }}>Markera måltid klar</Button>}
+                    {!done && <Button variant="outline" size="sm" disabled={mealSaving} onClick={async () => {
+                      setMealSaving(true); setMealError(false)
+                      try { await completeMeal(meal.slot, meal.recipeId); setTodayLog(await getTodayData()) }
+                      catch { setMealError(true) }
+                      finally { setMealSaving(false) }
+                    }}>Markera måltid klar</Button>}
                     <p className="text-sm text-muted-foreground">
                       {meal.slot}
                       {done ? " • Klar" : ""}

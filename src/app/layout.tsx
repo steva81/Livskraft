@@ -1,4 +1,6 @@
-import { Localize } from "@/lib/i18n/provider"
+import { getAuthSession } from "@/lib/auth"
+import prisma from "@/lib/prisma"
+import { readPreferences } from "@/lib/preferences"
 import type { Metadata } from "next"
 import localFont from "next/font/local"
 import "./globals.css"
@@ -20,16 +22,21 @@ export const metadata: Metadata = {
   description: "Personlig kost, träning och vardagsrörelse – anpassad efter hur ditt liv faktiskt ser ut.",
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode
 }>) {
-  return <Localize>{(
-    <html lang="sv">
+  const session = await getAuthSession()
+  const user = session?.user?.id ? await prisma.user.findUnique({
+    where: { id: session.user.id }, select: { preferences: true },
+  }) : null
+  const language = readPreferences(user?.preferences ?? null).language
+  return (
+    <html lang={language}>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <Providers>{children}</Providers>
+        <Providers session={session} language={language}>{children}</Providers>
       </body>
     </html>
-  )}</Localize>
+  )
 }

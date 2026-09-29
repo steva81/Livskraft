@@ -122,7 +122,7 @@ export async function getCoachReply(input:string,ctx:CoachContext, recentHistory
     if(intent==="food") return nextMeal ? `Your next planned meal is ${translate(nextMeal,"en")}. Open Recipes for ingredients and instructions. Eat according to hunger and your waking hours.` : recipes.length ? `If you are hungry, ${translate(recipes[0].title,"en")} is one of your filtered recipes. Check ingredients and product labels.` : "No checked recipe matches your dietary requirements. I will not suggest an unsafe substitution."
     if(intent==="training" || intent==="timed-training") {
       const minutes=Math.min(Number(input.match(/(\d+)\s*(?:minut|min\b)/i)?.[1]??ctx.workoutMinutes??20),ctx.workoutMinutes??120)
-      const location=/home/i.test(input)?"home":ctx.trainingLocation??"both"
+      const location=/\bhome\b/i.test(input)?"home":/\bgym\b/i.test(input)?"gym":ctx.trainingLocation??"both"
       const workout=(ctx.workouts??[]).find(w=>(location==="both"||w.type===location)&&workoutFits(w,ctx.trainingLevel??"beginner",ctx.homeEquipment??"kroppsvikt",minutes))
       return workout ? `You can choose ${translate(workout.title,"en")} (${workout.duration} minutes). Open Training for instructions. Rest between sets and adjust your pace; there is no extra workout to make up later.` : "No workout matches your time, equipment and level. Rest or browse Training for another option."
     }

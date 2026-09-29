@@ -57,6 +57,12 @@ export async function generateWeeklyPlanForUser(userId: string, options?: { pref
   const endDate = addDays(startDate, 6)
 
   return prisma.$transaction(async tx => {
+  // A concurrent first read may have created the week while we loaded the library.
+  // Reuse that complete calendar week, including any user choices already saved.
+  const existing = await tx.weeklyPlan.findFirst({
+    where: { userId, startDate, endDate }, include: { planDays: { orderBy: { date: "asc" } } },
+  })
+  if (existing?.planDays.length === 7 && existing.planDays.every((day, index) => +day.date === +addDays(startDate, index))) return existing
   await tx.weeklyPlan.deleteMany({
     where: { userId, startDate: { lte: endDate }, endDate: { gte: startDate } },
   })

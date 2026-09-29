@@ -74,5 +74,20 @@ async function main(){
  const legacyDaily=await dailyNutritionForUser(users[1].id)
  assert.equal(legacyDaily.consumed.count,1);assert.equal(legacyDaily.consumed.unknown.calories,1)
  console.log('PASS legacy keys/titles resolve independently of plan; missing or ambiguous recipes stay unknown')
+ identity=users[1].id
+ const concurrentWeek=await actions.getWeeklyPlan()
+ const concurrentDay=concurrentWeek.planDays.find(d=>+d.date===+today)
+ const concurrentMeals=['Frukost','Lunch'].map(slot=>({slot,recipeId:recipes[1].id,title:recipes[1].title}))
+ await prisma.planDay.update({where:{id:concurrentDay.id},data:{meals:encodeMeals(concurrentMeals,['Frukost','Lunch'])}})
+ await prisma.dailyLog.update({where:{userId_date:{userId:identity,date:today}},data:{mealsEaten:'[]'}})
+ // Force both callers to read the same pre-completion daily snapshot.
+ const upsert=prisma.dailyLog.upsert.bind(prisma.dailyLog)
+ let arrived=0,release
+ const bothRead=new Promise(resolve=>{release=resolve})
+ prisma.dailyLog.upsert=async args=>{const row=await upsert(args);if(++arrived===2)release();await bothRead;return row}
+ try {await Promise.all(concurrentMeals.map(meal=>actions.completeMeal(meal.slot,meal.recipeId)))}
+ finally {prisma.dailyLog.upsert=upsert}
+ assert.equal((await dailyNutritionForUser(identity)).consumed.count,2,'Concurrent meal completions must both survive')
+ console.log('PASS concurrent different meal completions preserve both intake records')
 }
 main().catch(e=>{console.error(e);process.exitCode=1}).finally(async()=>{await prisma.user.deleteMany({where:{id:{in:users.map(u=>u.id)}}});await prisma.recipe.deleteMany({where:{id:{in:recipes.map(r=>r.id)}}});await prisma.$disconnect()})

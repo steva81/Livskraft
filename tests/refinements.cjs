@@ -12,7 +12,7 @@ const load = Module._load
 Module._load = function(request, ...args) {
   if (request === '@/lib/auth') return {
     getAuthenticatedUserId: async () => identity,
-    getAuthSession: async () => identity ? { user: { id: identity } } : null,
+    getAuthSession: async () => identity ? { user: { id: identity }, loginAt: 0 } : null,
   }
   if (request === 'next/cache') return { revalidatePath() {} }
   return load.call(this, request, ...args)
@@ -30,8 +30,12 @@ const { refineRecipeData } = require('../prisma/recipe-refinements')
 const { aggregateIngredients, clarifyPortionIngredient } = require('../src/lib/shopping')
 const users = []
 const request = body => new Request('http://localhost/api/coach', { method: 'POST', body: JSON.stringify(body) })
+const historyRequest = () => new (require('next/server').NextRequest)('http://localhost/api/coach')
 async function main() {
-  for (let i = 0; i < 2; i++) users.push(await prisma.user.create({ data: { name: 'Refinement test', email: `refinement-${Date.now()}-${i}@example.invalid` } }))
+  // Planning now requires an explicitly completed profile; keep these fixtures ready.
+  for (let i = 0; i < 2; i++) users.push(await prisma.user.create({ data: { name: 'Refinement test', email: `refinement-${Date.now()}-${i}@example.invalid`,
+    currentWeight:80,height:180,activityLevel:'light',trainingLevel:'beginner',trainingLocation:'home',
+    preferences:JSON.stringify({primaryGoal:'maintain',planningConfirmed:true}) } }))
   identity = users[0].id
   const first = await actions.getShoppingListState()
   assert(first.items.length > 0)
@@ -70,12 +74,12 @@ async function main() {
   assert.equal((await readCoachHistory(users[0].id)).length, 2)
   assert.equal((await readCoachHistory(users[1].id)).length, 0)
   await prisma.$disconnect()
-  const restored = await coach.GET()
+  const restored = await coach.GET(historyRequest())
   assert.equal(restored.headers.get('Cache-Control'), 'no-store')
   assert.equal((await restored.json()).messages[1].text, sent.reply)
   assert.equal((await coach.POST(request({ message: 'x'.repeat(2001) }))).status, 400)
   identity = users[1].id
-  assert.deepEqual((await (await coach.GET()).json()).messages, [])
+  assert.deepEqual((await (await coach.GET(historyRequest())).json()).messages, [])
   await coach.DELETE()
   assert.equal((await readCoachHistory(users[0].id)).length, 2)
   for (let i = 0; i < 51; i++) await saveCoachExchange(users[0].id, `Question ${i}`, `Reply ${i}`)
@@ -105,7 +109,10 @@ async function main() {
   const context = { userName: 'Test', restrictions: [], dislikedFoods: [], stepGoal: 8000, todayMeals: [], todayWorkout: null, completedWorkoutsThisWeek: 0, workouts: [workout], trainingLevel: 'beginner', trainingLocation: 'home', homeEquipment: 'hantlar', workoutMinutes: 30 }
   assert.match(await getCoachReply('Jag vill träna i 20 minuter', context), /inget pass/)
   assert.match(await getCoachReply('Kan jag ändra min medicin?', context), /vårdkontakt/)
-  assert.match(await getCoachReply('Jag åt för mycket', context), /inte hoppa över mat/)
+  assert.match(await getCoachReply('Jag åt för mycket', context), /hoppa inte över mat/)
+  const places={...context,language:'en',workouts:[{...workout,title:'Home fixture',level:'beginner'},{...workout,id:'gym',title:'Gym fixture',type:'gym',level:'beginner'}]}
+  assert.match(await getCoachReply('I want to train at the gym for 20 minutes', places), /Gym fixture/)
+  assert.match(await getCoachReply('I want to train at home for 20 minutes', {...places,trainingLocation:'gym'}), /Home fixture/)
   console.log('PASS shared training matching, aliases, conservative malformed data and Coach safety')
 
   const recipes = await prisma.recipe.findMany()

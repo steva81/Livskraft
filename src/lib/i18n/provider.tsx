@@ -5,20 +5,24 @@ import { getUser, savePreferences } from "@/app/actions"
 import { readPreferences } from "@/lib/preferences"
 import { translate, type Language } from "./catalog"
 const LanguageContext=createContext({language:"sv" as Language,ready:false,setLanguage:async(_language:Language)=>{void _language}})
-export function LanguageProvider({children}:{children:ReactNode}) {
+export function LanguageProvider({children,initialLanguage="sv",initialUserId=null}:{children:ReactNode;initialLanguage?:Language;initialUserId?:string|null}) {
   const {data:session,status}=useSession()
-  const [language,setValue]=useState<Language>("sv"),[ready,setReady]=useState(false)
+  const [language,setValue]=useState<Language>(initialLanguage),[ready,setReady]=useState(!!initialUserId)
+  const [loadedFor,setLoadedFor]=useState(initialUserId)
   useEffect(()=>{
     let active=true
-    setReady(false)
     if(status==="loading") return
-    if(session?.user?.id) getUser().then(user=>{if(active)setValue(readPreferences(user?.preferences??null).language)}).catch(()=>{if(active)setValue("sv")}).finally(()=>{if(active)setReady(true)})
-    else {setValue(localStorage.getItem("livskraft-language")==="en"?"en":"sv");setReady(true)}
+    // The server-provided locale is authoritative for the initial authenticated render.
+    if(session?.user?.id===initialUserId && initialUserId){setValue(initialLanguage);setLoadedFor(initialUserId);setReady(true);return}
+    setReady(false)
+    if(session?.user?.id) getUser().then(user=>{if(active)setValue(readPreferences(user?.preferences??null).language)}).catch(()=>{if(active)setValue("sv")}).finally(()=>{if(active){setLoadedFor(session.user.id);setReady(true)}})
+    else {try{setValue(localStorage.getItem("livskraft-language")==="en"?"en":"sv")}catch{setValue("sv")}setLoadedFor(null);setReady(true)}
     return ()=>{active=false}
-  },[session?.user?.id,status])
+  },[session?.user?.id,status,initialUserId,initialLanguage])
   useEffect(()=>{document.documentElement.lang=language},[language])
-  const setLanguage=async(value:Language)=>{if(session?.user?.id) await savePreferences({language:value});localStorage.setItem("livskraft-language",value);setValue(value)}
-  return <LanguageContext.Provider value={{language,ready,setLanguage}}>{children}</LanguageContext.Provider>
+  const setLanguage=async(value:Language)=>{if(session?.user?.id) await savePreferences({language:value});try{localStorage.setItem("livskraft-language",value)}catch{/* Browser storage is optional; the database remains authoritative. */}setValue(value)}
+  const changingUser=!!session?.user?.id&&loadedFor!==session.user.id
+  return <LanguageContext.Provider value={{language,ready:ready&&!changingUser,setLanguage}}>{changingUser?<div role="status" aria-label="Loading / Laddar" className="p-8 text-center">…</div>:children}</LanguageContext.Provider>
 }
 export function useLanguage(){return useContext(LanguageContext)}
 export function LanguageSelector(){

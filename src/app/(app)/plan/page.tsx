@@ -38,12 +38,18 @@ export default function WeeklyPlanPage() {
   const [workouts, setWorkouts] = useState<Workout[]>([])
   const [loading, setLoading] = useState(true)
   const [nextWeek, setNextWeek] = useState(false)
+  const [loadError, setLoadError] = useState(false)
+  const [retryKey, setRetryKey] = useState(0)
 
   useEffect(() => {
     if (sessionStatus === "loading") return
+    let active = true
     setLoading(true)
+    setLoadError(false)
     Promise.all([getWeeklyPlan(nextWeek), getWorkouts(), getUser()]).then(([plan, ws, u]) => {
+      if (!active) return
       setPlanDays([])
+      setPlanId("")
       if (plan) {
         setPlanId(plan.id)
         setPlanDays(
@@ -56,8 +62,9 @@ export default function WeeklyPlanPage() {
       }
       setWorkouts(ws)
       setUser(u)
-    }).catch(()=>setError("Kunde inte ladda veckoplanen. Försök igen.")).finally(()=>setLoading(false))
-  }, [userId, sessionStatus, nextWeek])
+    }).catch(()=>{if(active)setLoadError(true)}).finally(()=>{if(active)setLoading(false)})
+    return () => { active = false }
+  }, [userId, sessionStatus, nextWeek, retryKey])
 
   const saveSlots=async(slots:MealSlot[],dayId?:string)=>{
     const previous=planDays
@@ -69,6 +76,11 @@ export default function WeeklyPlanPage() {
   if (sessionStatus === "loading" || loading) {
     return <Localize>{<div className="p-8 text-center text-muted-foreground">Laddar veckoplan...</div>}</Localize>
   }
+
+  if (loadError) return <Localize><div className="p-8 text-center space-y-4">
+    <p role="alert">{language === "en" ? "Could not load the weekly plan. Try again." : "Kunde inte ladda veckoplanen. Försök igen."}</p>
+    <Button onClick={() => setRetryKey(value => value + 1)}>Försök igen</Button>
+  </div></Localize>
 
   if (user && !profileReadiness(user).ready) {
     return (

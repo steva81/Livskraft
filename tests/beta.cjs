@@ -58,7 +58,10 @@ async function main() {
     assert(!('password' in await actions.getUser()))
   })
   await check('seven-day plan respects diet, duration, level and frequency', async () => {
-    const plan = await actions.getWeeklyPlan()
+    const [plan, concurrentPlan] = await Promise.all([actions.getWeeklyPlan(), actions.getWeeklyPlan()])
+    assert.equal(plan.id, concurrentPlan.id, 'Concurrent first reads must reuse the same week')
+    assert.deepEqual(plan.planDays.map(d=>d.id), concurrentPlan.planDays.map(d=>d.id))
+    assert.equal(await prisma.weeklyPlan.count({where:{userId:identity}}), 1)
     assert.equal(plan.planDays.length, 7)
     assert.equal(plan.planDays[0].dayOfWeek, 1)
     assert.equal(plan.planDays[6].dayOfWeek, 0)
