@@ -84,6 +84,7 @@ export default function ProgressPage() {
       <WeeklyNutrition />
       <NutritionBalance trend />
       <Card><CardHeader><CardTitle>Registrera dagens mätning</CardTitle><CardDescription>Frivilligt. En enskild mätning ändrar inte planen.</CardDescription></CardHeader><CardContent>
+        <p data-localize="off" className="text-sm mb-3">{language==="en"?"Saving weight here updates your current weight and today's dated measurement. Saving again replaces only the values you enter for today; earlier dates stay unchanged.":"Vikt som sparas här uppdaterar din nuvarande vikt och dagens daterade mätning. Om du sparar igen ersätts bara de värden du anger för idag; tidigare datum ändras inte."}</p>
         <form className="space-y-3" onSubmit={async e => {
           e.preventDefault(); setSaving(true)
           try { await saveMeasurements({ weight: weight ? Number(weight) : undefined, waist: waist ? Number(waist) : undefined, values: Object.keys(values).length ? values : undefined }); setSummary(await getProgressSummary()); setAdaptive(await getAdaptiveWeek()); setMessage("Mätningen är sparad.") }
@@ -122,6 +123,7 @@ export default function ProgressPage() {
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground mb-3">{trendText}</p>
+            <p data-localize="off" className="text-sm">{language==="en"?"Current weight. Baseline edits update this value; trends use dated measurements only.":"Nuvarande vikt. Ändringar av grunddata uppdaterar detta värde; trender bygger bara på daterade mätningar."}</p>
             <div className="flex items-end gap-2 mb-6">
               <span className="text-4xl font-bold">{latest != null ? latest.toLocaleString(language==="en"?"en-GB":"sv-SE", {minimumFractionDigits:1,maximumFractionDigits:1}) : "–"}</span>
               <span className="text-muted-foreground mb-1">kg</span>

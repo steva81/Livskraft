@@ -19,6 +19,7 @@ export function BodyDataEditor({user,onSaved}:{user:PublicUser;onSaved:(user:Pub
     <h2 className="text-xl font-semibold">{labels.title}</h2><BirthInputs value={body} onChange={setBody}/>
     <div className="grid gap-3 sm:grid-cols-2"><label>{labels.height}<input className="w-full border rounded p-2" type="number" min="100" max="250" step="any" value={height} onChange={e=>setHeight(e.target.value)}/></label><label>{labels.weight}<input className="w-full border rounded p-2" type="number" min="30" max="400" step="any" value={weight} onChange={e=>setWeight(e.target.value)}/></label></div>
     <p className="text-sm">{en?"Weight and height are needed for your personal plan. Birth year and sex for calculation are optional.":"Vikt och längd behövs för din personliga plan. Födelseår och kön för beräkning är frivilliga."}</p>
+    <p className="text-sm">{en?"Editing or clearing current weight here updates the value used for your plan. It does not add or change dated measurements. Record today's weight in Progress to include it in your history and trends.":"När du ändrar eller tar bort nuvarande vikt här uppdateras värdet som används för din plan. Daterade mätningar läggs inte till eller ändras. Registrera dagens vikt under Framsteg för att ta med den i historik och trender."}</p>
     <Button disabled={busy}>{en?"Save baseline data":"Spara grunddata"}</Button><p role="status">{message}</p>
   </form>
 }

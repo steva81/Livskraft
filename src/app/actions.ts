@@ -348,9 +348,10 @@ export async function getProgressSummary() {
   const average = (values: number[]) => values.length >= 2 ? values.reduce((sum, value) => sum + value, 0) / values.length : null
   const currentAverage = average(logs.filter(l => l.date >= weekStart && l.weight != null).map(l => l.weight!))
   const previousAverage = average(logs.filter(l => l.date < weekStart && l.weight != null).map(l => l.weight!))
-  const latestWeight = user.currentWeight ?? weights.at(-1) ?? null
+  // Current state may be corrected or cleared independently of dated history.
+  const latestWeight = user.currentWeight
   const latestMeasurement = await prisma.dailyLog.findFirst({where:{userId, measurements:{not:null}},orderBy:{date:"desc"},select:{measurements:true,date:true}})
-  const firstWeight = weights[0] ?? user.currentWeight
+  const firstWeight = weights[0] ?? null
   const avgSteps =
     logs.length > 0 ? Math.round(logs.reduce((sum, l) => sum + l.steps, 0) / logs.length) : 0
   const recentLogs = logs.filter(l => l.date >= weekStart && (l.stepsRecorded || l.steps > 0))
@@ -448,7 +449,7 @@ export async function saveMeasurements(input: { weight?: number; waist?: number;
     prisma.dailyLog.upsert({ where: { userId_date: { userId, date } }, create: { userId, date, ...storedInput }, update: storedInput }),
     prisma.user.update({ where: { id: userId }, data: { currentWeight: input.weight, waist: input.waist } }),
   ])
-  revalidatePath("/progress")
+  revalidatePath("/", "layout")
 }
 
 export async function saveMode(mode: "simple" | "advanced") {

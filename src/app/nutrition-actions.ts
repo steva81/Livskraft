@@ -53,6 +53,7 @@ export async function chooseNutritionProposal(scope:BalanceScope,key:string,acce
   revalidatePath("/", "layout")
 }
 export async function saveBodyData(input:BodyData & {height:number|null;currentWeight:number|null}) {
+  // Baseline correction only: dated measurements are explicitly saved in Progress.
   const userId=await identity()
   if (!input || !validBodyData(input) || [[input.height,100,250],[input.currentWeight,30,400]].some(([value,min,max])=>value!==null&&(typeof value!=="number"||!Number.isFinite(value)||value<min!||value>max!))) throw new Error("Kontrollera grunddata / Check baseline data")
   await prisma.$transaction(async tx=>{
