@@ -1,6 +1,6 @@
 "use client"
-import { LifestyleMosaic } from "@/components/lifestyle-mosaic"
 import { PageHeading } from "@/components/page-heading"
+import { WellnessPhoto } from "@/components/wellness-photo"
 import { translate } from "@/lib/i18n/catalog"
 import { Localize, useLanguage } from "@/lib/i18n/provider"
 
@@ -125,25 +125,29 @@ function UserCoachPage() {
 
   return <Localize>{(
     <div className="app-page max-w-4xl mx-auto flex flex-col gap-4">
-      <div>
-        <PageHeading section="coach" />
-        <p className="text-muted-foreground">Din personliga guide för kost, träning och vardagsrörelse.</p>
+      <div className="overflow-hidden rounded-[2rem] border border-[#e3e6d9] bg-white">
+        <div className="h-48 sm:h-64 relative">
+          <WellnessPhoto src="/images/lifestyle/coach.png" className="w-full h-full object-cover object-center" />
+        </div>
+        <div className="p-6 sm:p-8 lg:p-10 border-t">
+          <PageHeading section="coach" />
+          <p className="text-lg text-muted-foreground mt-2">Din personliga guide för kost, träning och vardagsrörelse.</p>
+        </div>
       </div>
 
       <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_220px]"><div className="min-w-0 space-y-5">
       {overviewError && <p role="status" className="text-sm">Kunde inte läsa dagens översikt. Ladda om sidan för att försöka igen.</p>}
       {historyError && <p role="alert" className="text-sm text-red-700">{historyError}</p>}
       {overview&&!overview.ready&&<p data-localize="off" className="rounded-xl border p-4">{language==="en"?"Complete My Plan for personal recommendations. General guidance is available meanwhile.":"Komplettera Min plan för personliga rekommendationer. Under tiden finns allmänna råd."} <a className="underline" href="/my-plan">{language==="en"?"Complete My Plan":"Komplettera min plan"}</a></p>}
-      {overview?.ready && <Card className="wellness-intro"><CardContent className="p-4 space-y-3 text-sm">
-        <LifestyleMosaic variant="strip" themes={["calm", "balance"]} />
-        <p className="font-semibold">Hej {overview.name}, vad behöver du idag?</p>
-        <div className="grid gap-3 sm:grid-cols-2">
-        <p>Nästa måltid: {overview.nextMeal??(overview.hasMealPlan ? "Alla planerade måltider är klara." : "Ingen matplan som matchar din profil just nu.")}</p>
-        <p>Träning: {overview.workout??"Vilodag från styrketräning"}</p>
-        <p>{overview.steps.toLocaleString(language==="en"?"en-GB":"sv-SE")} av {overview.stepGoal.toLocaleString(language==="en"?"en-GB":"sv-SE")} steg</p>
+      {overview?.ready && <div className="rounded-[1.5rem] bg-[#f0f5eb] border border-[#dfe7d8] p-6 space-y-4 text-sm">
+        <p className="text-lg font-semibold text-[#244d36]">Hej {overview.name}, vad behöver du idag?</p>
+        <div className="grid gap-3 sm:grid-cols-2 text-[#465c4c]">
+          <div className="bg-white/60 p-3 rounded-xl"><p className="font-medium text-[#244d36] mb-1">Nästa måltid</p><p>{overview.nextMeal??(overview.hasMealPlan ? "Alla planerade måltider är klara." : "Ingen matplan som matchar din profil just nu.")}</p></div>
+          <div className="bg-white/60 p-3 rounded-xl"><p className="font-medium text-[#244d36] mb-1">Dagens pass</p><p>{overview.workout??"Vilodag från styrketräning"}</p></div>
+          <div className="bg-white/60 p-3 rounded-xl"><p className="font-medium text-[#244d36] mb-1">Rörelse</p><p>{overview.steps.toLocaleString(language==="en"?"en-GB":"sv-SE")} av {overview.stepGoal.toLocaleString(language==="en"?"en-GB":"sv-SE")} steg</p></div>
         </div>
-        {mode === "advanced" && <p className="text-muted-foreground">Kostregler: {overview.restrictions.map(displayValue).join(", ") || "Inga angivna"}. Mat du ogillar: {overview.dislikedFoods.join(", ") || "Inga angivna"}.</p>}
-      </CardContent></Card>}
+        {mode === "advanced" && <p className="text-[#617064] mt-2">Kostregler: {overview.restrictions.map(displayValue).join(", ") || "Inga angivna"}. Mat du ogillar: {overview.dislikedFoods.join(", ") || "Inga angivna"}.</p>}
+      </div>}
       <Card className="flex flex-col overflow-hidden border-0 bg-transparent shadow-none">
         <CardContent ref={conversation} role="log" aria-label="Samtal med coachen" aria-live="polite" className="min-h-64 max-h-[50dvh] overflow-y-auto p-1 sm:p-2 space-y-5">
           {messages.map((msg) => (
@@ -194,18 +198,20 @@ function UserCoachPage() {
         </CardFooter>
       </Card>
 
-      {/* Quick-prompt chips */}
-      <div className="flex flex-wrap gap-2">
-        {QUICK_PROMPTS.map((p) => (
-          <button
-            key={p}
-            onClick={() => sendMessage(translate(p,language))}
-            disabled={loading || !historyReady}
-            className="text-sm text-left bg-white border rounded-full px-4 py-3 hover:bg-gray-50 transition disabled:opacity-50"
-          >
-            {p}
-          </button>
-        ))}
+      <div className="mt-2">
+        <p className="text-sm font-medium text-[#244d36] mb-3">{language==="en"?"Need inspiration? Try asking:":"Behöver du inspiration? Prova att fråga:"}</p>
+        <div className="flex flex-wrap gap-2">
+          {QUICK_PROMPTS.map((p) => (
+            <button
+              key={p}
+              onClick={() => sendMessage(translate(p,language))}
+              disabled={loading || !historyReady}
+              className="text-sm text-left bg-[#f0f5eb] border border-[#dfe7d8] text-[#244d36] rounded-xl px-4 py-3 hover:bg-[#e4eedb] transition disabled:opacity-50"
+            >
+              {p}
+            </button>
+          ))}
+        </div>
       </div>
       <p className="text-xs text-muted-foreground">De senaste 50 frågorna och svaren sparas på ditt konto. De senaste 12 meddelandena används som samtalskontext. Undvik att skriva känsliga uppgifter.</p>
       </div><aside className="wellness-panel min-w-0 space-y-3 p-4"><p data-localize="off" className="wellness-eyebrow">{language==="en"?"CONVERSATIONS":"SAMTAL"}</p>

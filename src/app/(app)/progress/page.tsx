@@ -3,6 +3,7 @@ import { PageHeading } from "@/components/page-heading"
 import { goalGuidance, goalLabels, progressGuidance } from "@/lib/nutrition"
 import { WeeklyNutrition } from "@/components/weekly-nutrition"
 import { NutritionBalance } from "@/components/nutrition-balance"
+import { WellnessPhoto } from "@/components/wellness-photo"
 import Link from "next/link"
 import { Localize, useLanguage } from "@/lib/i18n/provider"
 
@@ -75,9 +76,14 @@ export default function ProgressPage() {
 
   return <Localize>{(
     <div className="app-page max-w-4xl mx-auto space-y-6">
-      <div>
-        <PageHeading section="progress" />
-        <p className="text-muted-foreground">Trender, mätningar och din adaptiva vecka.</p>
+      <div className="overflow-hidden rounded-[2rem] border border-[#e3e6d9] bg-white">
+        <div className="h-48 sm:h-64 relative">
+          <WellnessPhoto src="/images/lifestyle/progress.png" className="w-full h-full object-cover object-center" />
+        </div>
+        <div className="p-6 sm:p-8 lg:p-10 border-t">
+          <PageHeading section="progress" />
+          <p className="text-lg text-muted-foreground mt-2">Trender, mätningar och din adaptiva vecka.</p>
+        </div>
       </div>
 
       {summary?.ready && <div data-localize="off" className="wellness-intro rounded-3xl border p-5 space-y-2"><p className="font-semibold">{goalLabels[language][summary.primaryGoal]}</p><p>{goalGuidance(summary.primaryGoal,language==="en")}</p><p>{progressGuidance(summary.primaryGoal,average!=null&&first!=null?average-first:null,language==="en")}</p></div>}

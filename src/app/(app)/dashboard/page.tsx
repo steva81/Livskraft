@@ -1,5 +1,5 @@
 "use client"
-import { LifestyleMosaic } from "@/components/lifestyle-mosaic"
+import { WellnessPhoto } from "@/components/wellness-photo"
 import { PageHeading } from "@/components/page-heading"
 import { Localize, useLanguage } from "@/lib/i18n/provider"
 
@@ -110,7 +110,24 @@ export default function DashboardPage() {
     return <Localize>{<div className="p-8 text-center text-muted-foreground">Kunde inte ladda din dag. Logga in igen.</div>}</Localize>
   }
 
-  if(!profileReadiness(user).ready)return <div className="mx-auto max-w-3xl space-y-5"><PageHeading section="today" /><ProfileReadinessCard user={user}/><p>{language==="en"?"General guidance: eat regularly and make room for rest. Your own meals can still be logged below.":"Allmän vägledning: ät regelbundet och ge plats för vila. Du kan fortfarande registrera egen mat nedan."}</p><DailyNutrition/></div>
+  if(!profileReadiness(user).ready)return (
+    <div className="mx-auto max-w-4xl space-y-6">
+      <div className="overflow-hidden rounded-[2rem] border border-[#e3e6d9] bg-[#fdfefc]">
+        <div className="h-48 sm:h-64 relative">
+          <WellnessPhoto src="/images/lifestyle/today.png" className="w-full h-full object-cover object-center" />
+        </div>
+        <div className="p-6 sm:p-8 lg:p-10 space-y-6">
+          <div>
+            <PageHeading section="today" />
+            <p className="text-lg text-muted-foreground">{language==="en"?"Your day, at your pace.":"Din dag, i din takt."}</p>
+          </div>
+          <ProfileReadinessCard user={user}/>
+        </div>
+      </div>
+      <p>{language==="en"?"General guidance: eat regularly and make room for rest. Your own meals can still be logged below.":"Allmän vägledning: ät regelbundet och ge plats för vila. Du kan fortfarande registrera egen mat nedan."}</p>
+      <DailyNutrition/>
+    </div>
+  )
   const goalSafety = savedGoalSafety(user)
   const stepProgress = Math.min((todayLog.steps / user.stepGoal) * 100, 100)
   const eaten = mealCompletionKeys(todayLog.mealsEaten)
@@ -118,14 +135,22 @@ export default function DashboardPage() {
   return <Localize>{(
     <div className="app-page max-w-4xl mx-auto space-y-6">
       {goalSafety?.message && <div role="alert" className="rounded bg-amber-50 p-3 text-sm text-amber-900"><p>{goalSafety.message}</p><Link href="/my-plan" className="underline">Ändra målet i Min plan</Link></div>}
-      <div className="flex items-center justify-between">
-        <div>
-          <PageHeading section="today" />
-          <p className="text-muted-foreground">{language==="en"?"Your day, at your pace.":"Din dag, i din takt."}</p>
+      <div className="overflow-hidden rounded-[2rem] border border-[#e3e6d9] bg-[#fdfefc]">
+        <div className="h-48 sm:h-64 relative">
+          <WellnessPhoto src="/images/lifestyle/today.png" className="w-full h-full object-cover object-center" />
+        </div>
+        <div className="p-6 sm:p-8 lg:p-10 space-y-6">
+          <div>
+            <PageHeading section="today" />
+            <p className="text-lg text-muted-foreground">{language==="en"?"Your day, at your pace.":"Din dag, i din takt."}</p>
+          </div>
+          <div className="p-5 rounded-2xl bg-[#edf6e7] border border-[#dfe7d8]">
+            <p className="text-lg font-semibold text-primary">Nästa steg: {meals.find(m => !eaten.includes(`${m.slot}:${m.recipeId}`) && !eaten.includes(m.title))?.title ?? "Fortsätt med rörelse eller återhämtning i din takt."}</p>
+            <p className="text-sm mt-1 text-[#465c4c]">Dagen behöver inte bli perfekt. Fortsätt med nästa vanliga måltid eller pass.</p>
+            <Link className="inline-block mt-3 text-primary underline text-sm font-medium" href="/meals">Kontrollera veckans ingredienser och inköpslista</Link>
+          </div>
         </div>
       </div>
-
-      <div className="wellness-intro rounded-3xl border p-6"><div className="warm-intro-layout"><div className="space-y-3"><p className="text-lg font-semibold text-primary">Nästa steg: {meals.find(m => !eaten.includes(`${m.slot}:${m.recipeId}`) && !eaten.includes(m.title))?.title ?? "Fortsätt med rörelse eller återhämtning i din takt."}</p><p className="text-sm">Dagen behöver inte bli perfekt. Fortsätt med nästa vanliga måltid eller pass.</p><Link className="text-primary underline text-sm" href="/meals">Kontrollera veckans ingredienser och inköpslista</Link></div><LifestyleMosaic variant="strip" themes={["outdoors", "calm"]} /></div></div>
 
       <div className="grid gap-5 md:grid-cols-2">
         <Card className="md:col-span-2">

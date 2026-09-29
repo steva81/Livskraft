@@ -1,5 +1,5 @@
 "use client"
-import { LifestyleMosaic } from "@/components/lifestyle-mosaic"
+import { WellnessPhoto } from "@/components/wellness-photo"
 import { PageHeading } from "@/components/page-heading"
 import {profileReadiness} from "@/lib/profile-readiness"
 import {ProfileReadinessCard} from "@/components/profile-readiness"
@@ -132,15 +132,17 @@ export default function TrainingPage() {
   }
   return <Localize>{(
     <div className="app-page max-w-4xl mx-auto space-y-6">
-      <div className="warm-intro-layout">
-        <div>
-        <PageHeading section="training" />
-        <p className="text-muted-foreground">
-          Styrkepass hemma eller på gym — separat från steg och promenader.
-        </p>
-        {ready&&<p className="text-sm text-muted-foreground mt-2">Utrustning hemma: {preferences.equipment}. Gym innebär vanliga gymmaskiner och fria vikter. Du kan bläddra bland alla nivåer; rekommenderade pass passar din profil och tidsbudget.</p>}
+      <div className="overflow-hidden rounded-[2rem] border border-[#e3e6d9] bg-white">
+        <div className="h-48 sm:h-64 relative">
+          <WellnessPhoto src="/images/lifestyle/training.png" className="w-full h-full object-cover object-center" />
         </div>
-        <LifestyleMosaic variant="strip" themes={["strength", "balance"]} />
+        <div className="p-6 sm:p-8 lg:p-10 border-t">
+          <PageHeading section="training" />
+          <p className="text-lg text-muted-foreground mt-2">
+            Styrkepass hemma eller på gym — separat från steg och promenader.
+          </p>
+          {ready&&<p className="text-sm text-[#465c4c] mt-4 bg-[#f0f5eb] p-4 rounded-2xl border border-[#dfe7d8]">Utrustning hemma: {preferences.equipment}. Gym innebär vanliga gymmaskiner och fria vikter. Du kan bläddra bland alla nivåer; rekommenderade pass passar din profil och tidsbudget.</p>}
+        </div>
       </div>
 
       <GoalSummary />{user&&<ProfileReadinessCard user={user}/>}

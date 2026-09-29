@@ -4,6 +4,7 @@ import {profileReadiness} from "@/lib/profile-readiness"
 import {ProfileReadinessCard} from "@/components/profile-readiness"
 import { GoalSummary } from "@/components/goal-summary"
 import { Localize, useLanguage } from "@/lib/i18n/provider"
+import { WellnessPhoto } from "@/components/wellness-photo"
 
 import { useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -69,7 +70,37 @@ export default function WeeklyPlanPage() {
     return <Localize>{<div className="p-8 text-center text-muted-foreground">Laddar veckoplan...</div>}</Localize>
   }
 
-  if(user&&!profileReadiness(user).ready)return <ProfileReadinessCard user={user}/>
+  if (user && !profileReadiness(user).ready) {
+    return (
+      <Localize>
+        <div className="max-w-4xl mx-auto space-y-8 pb-10">
+          <PageHeading section="week" />
+          <div className="overflow-hidden rounded-[2rem] border border-[#e3e6d9] bg-white">
+            <div className="h-48 sm:h-72 relative">
+              <WellnessPhoto src="/images/lifestyle/weekly-plan.png" className="w-full h-full object-cover object-[50%_80%]" />
+            </div>
+            <div className="p-6 sm:p-8 lg:p-10 border-t">
+              <ProfileReadinessCard user={user} />
+            </div>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-3">
+            <div className="rounded-2xl bg-[#f7f8e9] p-5">
+              <h3 className="font-semibold text-[#244d36] mb-2">{language === "en" ? "Food that fits your week" : "Mat som passar din vecka"}</h3>
+              <p className="text-sm text-[#617064]">{language === "en" ? "We plan your meals around your everyday life, not the other way around." : "Vi planerar måltiderna efter din vardag, inte tvärtom."}</p>
+            </div>
+            <div className="rounded-2xl bg-[#f0f5eb] p-5">
+              <h3 className="font-semibold text-[#244d36] mb-2">{language === "en" ? "Flexible meal timing" : "Flexibla måltider"}</h3>
+              <p className="text-sm text-[#617064]">{language === "en" ? "Eat when you're hungry. Skip slots you don't need." : "Ät när du är hungrig. Hoppa över måltider du inte behöver."}</p>
+            </div>
+            <div className="rounded-2xl bg-[#faf2dc] p-5">
+              <h3 className="font-semibold text-[#244d36] mb-2">{language === "en" ? "Adapted to your preferences" : "Anpassat efter dig"}</h3>
+              <p className="text-sm text-[#617064]">{language === "en" ? "Your diet rules, your cooking preferences, your goals." : "Dina kostregler, dina matlagningsval, dina mål."}</p>
+            </div>
+          </div>
+        </div>
+      </Localize>
+    )
+  }
   const safety = user ? savedGoalSafety(user) : null
   if (safety?.level === "blocked") return <Localize>{<div role="alert" className="space-y-3 rounded border p-4"><p>{safety.message}</p><Link className="underline" href="/my-plan">Ändra målet i Min plan</Link></div>}</Localize>
 

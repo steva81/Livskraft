@@ -1,5 +1,5 @@
 "use client"
-import { LifestyleMosaic } from "@/components/lifestyle-mosaic"
+import { WellnessPhoto } from "@/components/wellness-photo"
 import { PageHeading } from "@/components/page-heading"
 import * as Dialog from "@radix-ui/react-dialog"
 import { translate } from "@/lib/i18n/catalog"
@@ -109,15 +109,17 @@ function UserMealsPage() {
 
   return <Localize>{(
     <div className="app-page max-w-4xl mx-auto space-y-6">
-      <div className="warm-intro-layout">
-        <div>
-        <PageHeading section="recipes" />
-        <p className="text-muted-foreground">
-          Recept som passerar dina hårda kostregler
-          {restrictions.length > 0 && ` (${restrictions.map(value=>translate(displayValue(value),language)).join(", ")})`}
-        </p>
+      <div className="overflow-hidden rounded-[2rem] border border-[#e3e6d9] bg-white">
+        <div className="h-48 sm:h-64 relative">
+          <WellnessPhoto src="/images/lifestyle/recipes.png" className="w-full h-full object-cover object-center" />
         </div>
-        <LifestyleMosaic variant="strip" themes={["cooking", "meal"]} />
+        <div className="p-6 sm:p-8 lg:p-10 border-t">
+          <PageHeading section="recipes" />
+          <p className="text-lg text-muted-foreground mt-2">
+            Recept som passerar dina hårda kostregler
+            {restrictions.length > 0 && ` (${restrictions.map(value=>translate(displayValue(value),language)).join(", ")})`}
+          </p>
+        </div>
       </div>
 
       <div role="group" aria-label="Recept och inköp" className="wellness-tabs flex flex-wrap gap-2"><Button variant={tab==="recipes"?"default":"outline"} aria-pressed={tab==="recipes"} onClick={()=>setTab("recipes")}>Receptförslag</Button><Button variant={tab==="shopping"?"default":"outline"} aria-pressed={tab==="shopping"} onClick={()=>{setTab("shopping");setOpenId(null)}}>Inköpslista</Button></div>

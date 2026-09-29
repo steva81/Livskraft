@@ -2,8 +2,8 @@
 
 import { useEffect, useRef, useState } from "react"
 import Link from "next/link"
-import { LifestyleMosaic } from "@/components/lifestyle-mosaic"
 import { ArrowRight, Utensils, Dumbbell, CalendarDays, TrendingUp, MessageCircle, Target, Sun, Footprints } from "lucide-react"
+import { WellnessPhoto } from "@/components/wellness-photo"
 import { getHomeOverview } from "@/app/actions"
 import { useLanguage } from "@/lib/i18n/provider"
 import { profileReadiness, readinessLabels, welcomeGreeting } from "@/lib/profile-readiness"
@@ -44,7 +44,7 @@ export default function HomePage() {
       <p className="inline-flex items-center gap-2 rounded-full bg-[#dcefd9] px-3 py-1 text-xs font-semibold text-[#244d36]"><Sun size={15} aria-hidden="true" /><span className="first-letter:uppercase">{new Date().toLocaleDateString(en ? "en-GB" : "sv-SE", { weekday: "long", day: "numeric", month: "long" })}</span></p>
       <h1 className="mt-4 text-3xl font-semibold leading-tight sm:text-4xl">{greeting}</h1>
       <p className="mt-2 text-lg leading-relaxed text-[#617064]">{en ? "What would you like to focus on today?" : "Vad vill du fokusera på idag?"}</p>
-      </div><LifestyleMosaic variant="home" /></div>
+      </div><WellnessPhoto src="/images/lifestyle/home.png" className="w-full h-56 md:h-full min-h-[220px] rounded-[1.75rem] object-cover object-center" /></div>
       <div className="mt-7 grid gap-3 lg:grid-cols-3">
         <div className="rounded-[1.5rem] bg-white/85 p-4">
           <p className="home-eyebrow">{en ? "YOUR PACE" : "DIN TAKT"}</p>

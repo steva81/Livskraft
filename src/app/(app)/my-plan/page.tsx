@@ -1,5 +1,6 @@
 "use client"
 import { PageHeading } from "@/components/page-heading"
+import { WellnessPhoto } from "@/components/wellness-photo"
 import {useEffect,useState} from "react"
 import Link from "next/link"
 import {ProfileReadinessCard} from "@/components/profile-readiness"
@@ -17,7 +18,18 @@ export default function MyPlan(){
  const [welcome,setWelcome]=useState(false)
  const [user,setUser]=useState<PublicUser|null>(null),[error,setError]=useState("")
  useEffect(()=>{setWelcome(new URLSearchParams(window.location.search).has("welcome"));getUser().then(setUser).catch(()=>setError("Kunde inte ladda profilen. Försök igen."))},[])
- return <Localize><div className="app-page settings-page max-w-3xl mx-auto space-y-6"><PageHeading section="plan" />{welcome&&user&&profileReadiness(user).ready&&<section className="rounded border bg-secondary p-4 space-y-3"><h2 className="font-semibold">Din grundplan är klar. Vill du göra den ännu mer personlig?</h2><Link className="underline" href="/dashboard">Börja med min grundplan</Link></section>}<p>Här anpassar du planen. Registrera dagens resultat under Framsteg.</p><nav className="settings-jumps flex flex-wrap gap-2 text-sm">{[["food","Mat"],["health","Hälsoanpassning"],["training","Träning"],["daily","Vardag"],["measurements","Kroppsmått"]].map(([id,label])=><a key={id} href={`#${id}`}>{label}</a>)}</nav>{user?<><ProfileReadinessCard user={user}/><BodyDataEditor user={user} onSaved={setUser}/><GoalEditor user={user} onSaved={setUser}/><PlanForm initial={user} onSaved={setUser}/></>:<p role="status">{error||"Laddar din profil…"}</p>}</div></Localize>
+ return <Localize><div className="app-page settings-page max-w-4xl mx-auto space-y-8">
+  <div className="overflow-hidden rounded-[2rem] border border-[#e3e6d9] bg-white">
+    <div className="h-48 sm:h-72 relative">
+      <WellnessPhoto src="/images/lifestyle/my-plan.png" className="w-full h-full object-cover object-[50%_85%]" />
+    </div>
+    <div className="p-6 sm:p-8 lg:p-10 border-t">
+      <PageHeading section="plan" />
+      <p className="text-lg text-muted-foreground mt-2">Här anpassar du planen. Registrera dagens resultat under Framsteg.</p>
+    </div>
+  </div>
+  {welcome&&user&&profileReadiness(user).ready&&<section className="rounded border bg-secondary p-4 space-y-3"><h2 className="font-semibold">Din grundplan är klar. Vill du göra den ännu mer personlig?</h2><Link className="underline" href="/dashboard">Börja med min grundplan</Link></section>}
+  <nav className="settings-jumps flex flex-wrap gap-2 text-sm">{[["food","Mat"],["health","Hälsoanpassning"],["training","Träning"],["daily","Vardag"],["measurements","Kroppsmått"]].map(([id,label])=><a key={id} href={`#${id}`}>{label}</a>)}</nav>{user?<><ProfileReadinessCard user={user}/><BodyDataEditor user={user} onSaved={setUser}/><GoalEditor user={user} onSaved={setUser}/><PlanForm initial={user} onSaved={setUser}/></>:<p role="status">{error||"Laddar din profil…"}</p>}</div></Localize>
 }
 function PlanForm({initial,onSaved}:{initial:PublicUser;onSaved:(user:PublicUser)=>void}){
  const {language}=useLanguage(),en=language==="en"
