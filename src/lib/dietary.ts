@@ -54,6 +54,16 @@ const NUT_WORDS = [
   "peanut",
 ]
 
+// Keep the existing Swedish matches, including compound ingredient names.
+const FISH_WORDS = ["fisk", "lax", "tonfisk", "torsk", "ansjovis"]
+// Additional Swedish/English species need word boundaries: e.g. ål must not
+// match grönkål. Recognize common inflections and Swedish ingredient compounds.
+// This vocabulary is for fish allergy only; other dietary rules are unchanged.
+const additionalFishPattern = new RegExp(
+  "(?:^|[^a-zåäöé])(?:sej|öring|sill|strömming|sardell|sardin|makrill|kolja|hälleflundra|rödspätta|abborre|gädda|gös|sik|regnbåge|ål|salmon|cod|tuna|trout|pollock|coalfish|herring|anchovy|anchovies|sardine|mackerel|haddock|halibut|plaice|perch|pike|zander|whitefish|eel|fish)(?:s|en|ar|or|fil[eé](?:er|n)?|rom|pastej|sås|buljong|fond|olja)?(?=$|[^a-zåäöé])",
+  "i"
+)
+
 function parseJsonArray(value: string | null | undefined): string[] {
   if (!value) return []
   try {
@@ -107,7 +117,7 @@ export function recipeMeetsConstraints(
     nötter: NUT_WORDS, nötallergi: NUT_WORDS, jordnötter: ["jordnöt", "peanut"],
     mjölk: DAIRY, mjölkprotein: DAIRY, ägg: ["ägg"],
     soja: ["soja", "tofu", "edamame"], sesam: ["sesam", "tahini"],
-    fisk: ["fisk", "lax", "tonfisk", "torsk", "ansjovis"],
+    fisk: FISH_WORDS,
     skaldjur: ["räk", "kräft", "krabb", "hummer", "mussl", "ostron"],
     selleri: ["selleri", "buljong"], senap: ["senap"], lupin: ["lupin"],
     sulfiter: ["vin", "vinäger", "torkad"],
@@ -116,8 +126,9 @@ export function recipeMeetsConstraints(
   for (const restriction of restrictions) {
     const r = restriction.toLowerCase().replaceAll("_", "-")
     if (r.startsWith("allergy:")) {
-      const words = allergyWords[canonicalFoodTerm(r.slice(8))]
-      if (!words || containsAny(blob, words)) return false
+      const allergy = canonicalFoodTerm(r.slice(8))
+      const words = allergyWords[allergy]
+      if (!words || containsAny(blob, words) || (allergy === "fisk" && additionalFishPattern.test(blob))) return false
       continue
     }
     if (r === "halal" || r === "kosher") {
