@@ -18,6 +18,7 @@ import { profileReadiness } from "@/lib/profile-readiness"
 import { ProfileReadinessCard } from "@/components/profile-readiness"
 import Link from "next/link"
 import { DailyNutrition } from "@/components/daily-nutrition"
+import { mealCompletionKeys } from "@/lib/meal-intake"
 
 export default function DashboardPage() {
   const {language}=useLanguage()
@@ -67,13 +68,7 @@ export default function DashboardPage() {
   if(!profileReadiness(user).ready)return <div className="mx-auto max-w-3xl space-y-5"><PageHeading section="today" /><ProfileReadinessCard user={user}/><p>{language==="en"?"General guidance: eat regularly and make room for rest. Your own meals can still be logged below.":"Allmän vägledning: ät regelbundet och ge plats för vila. Du kan fortfarande registrera egen mat nedan."}</p><DailyNutrition/></div>
   const goalSafety = savedGoalSafety(user)
   const stepProgress = Math.min((todayLog.steps / user.stepGoal) * 100, 100)
-  const eaten = (() => {
-    try {
-      return JSON.parse(todayLog.mealsEaten ?? "[]") as string[]
-    } catch {
-      return []
-    }
-  })()
+  const eaten = mealCompletionKeys(todayLog.mealsEaten)
 
   return <Localize>{(
     <div className="app-page max-w-4xl mx-auto space-y-6">

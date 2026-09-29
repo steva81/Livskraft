@@ -87,7 +87,7 @@ async function main() {
     assert.equal((await actions.getUser()).mode,'advanced')
     const meal = (await actions.getTodayPlanContext()).meals[0]
     await actions.completeMeal(meal.slot,meal.recipeId)
-    assert(JSON.parse((await actions.getTodayData()).mealsEaten).includes(`${meal.slot}:${meal.recipeId}`))
+    assert(require('../src/lib/meal-intake').mealCompletionKeys((await actions.getTodayData()).mealsEaten).includes(`${meal.slot}:${meal.recipeId}`))
   })
   await check('adaptive insufficient history, meaningful changes and persisted acceptance', async () => {
     assert.equal((await actions.getAdaptiveWeek()).status,'insufficient')

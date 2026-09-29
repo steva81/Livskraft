@@ -2,6 +2,7 @@
 
 import { primaryGoal, primaryGoals, type PrimaryGoal } from "@/lib/nutrition"
 import { dailyNutritionForUser } from "@/lib/daily-nutrition"
+import { mealCompletionKeys, recordConsumedMeal } from "@/lib/meal-intake"
 import { profileReadiness } from "@/lib/profile-readiness"
 import { onboardingErrors } from "@/lib/onboarding-validation"
 import { Prisma } from "@prisma/client"
@@ -468,12 +469,12 @@ export async function completeMeal(slot: string, recipeId: string) {
   const userId = await getAuthenticatedUserId()
   if (!userId) return
   const context = await getTodayPlanContext()
-  if (!context.meals.some(m => m.slot === slot && m.recipeId === recipeId)) return
+  const meal = context.meals.find(m => m.slot === slot && m.recipeId === recipeId)
+  if (!meal) return
   const log = await getTodayData()
   if (!log) return
-  const eaten = new Set(parseStringList(log.mealsEaten))
-  eaten.add(`${slot}:${recipeId}`)
-  await prisma.dailyLog.update({ where: { userId_date: { userId, date: todayDate() } }, data: { mealsEaten: JSON.stringify([...eaten]) } })
+  const recipes = await prisma.recipe.findMany()
+  await prisma.dailyLog.update({ where: { userId_date: { userId, date: todayDate() } }, data: { mealsEaten: recordConsumedMeal(log.mealsEaten, meal, recipes) } })
 }
 
 export async function getCoachContext() {
@@ -481,7 +482,7 @@ export async function getCoachContext() {
   if (!user) return null
   const [day, log, recipes, workouts, history] = await Promise.all([getTodayPlanContext(),getTodayData(),getRecommendedRecipes(),getWorkouts(),getWorkoutLogs()])
   const preferences = readPreferences(user.preferences)
-  const eaten = parseStringList(log?.mealsEaten)
+  const eaten = mealCompletionKeys(log?.mealsEaten)
   return {
     health: preferences.health, language: preferences.language, budget: preferences.budget, workSchedule: preferences.workSchedule,
     readiness:profileReadiness(user),

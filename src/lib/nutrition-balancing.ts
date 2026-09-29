@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto"
+import { mealCompletionKeys } from "./meal-intake"
 import prisma from "./prisma"
 import { dailyNutritionForUser } from "./daily-nutrition"
 import { nutritionTarget, parseNutrition, primaryGoal, weightTrend } from "./nutrition"
@@ -44,7 +45,7 @@ export async function nutritionProposal(userId: string, scope: BalanceScope) {
   const allowed = recipes.filter(r=>recipeMeetsConstraints(r,parseStringList(user.dietRestrictions),parseStringList(user.dislikedFoods))&&r.prepTime<=p.cookingMinutes)
   const logs = await prisma.dailyLog.findMany({where:{userId,date:{gte:start,lt:end}}})
   for (const day of days) {
-    const meals = parsePlannedMeals(day.meals), eaten = parseStringList(logs.find(l=>+l.date===+day.date)?.mealsEaten)
+    const meals = parsePlannedMeals(day.meals), eaten = mealCompletionKeys(logs.find(l=>+l.date===+day.date)?.mealsEaten)
     for (let i=0;i<meals.length;i++) {
       const meal=meals[i], original=recipes.find(r=>r.id===meal.recipeId)
       if (!original || eaten.includes(`${meal.slot}:${meal.recipeId}`)||eaten.includes(meal.title)) continue
