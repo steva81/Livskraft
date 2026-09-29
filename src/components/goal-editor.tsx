@@ -15,7 +15,7 @@ export function GoalEditor({user,onSaved}:{user:PublicUser;onSaved:(user:PublicU
  useEffect(()=>{setGoal(readPreferences(user.preferences).primaryGoal??"");setTarget(String(user.targetWeight??""));setWeeks(String(user.timeframeWeeks??""))},[user])
  const changing=goal==="lose"||(goal==="build-muscle"&&(target!==""||weeks!==""))
  const safety=changing?assessGoal({currentWeight:user.currentWeight,targetWeight:target,timeframeWeeks:weeks}):null
- return <Localize><form className="space-y-3 rounded-xl border p-4" onSubmit={async e=>{
+ return <Localize><form className="wellness-panel space-y-4 p-5 sm:p-6" onSubmit={async e=>{
  e.preventDefault();if(!goal)return;setSaving(true);setMessage("")
  try {const result=await updateWeightGoal({primaryGoal:goal,targetWeight:target?Number(target):null,timeframeWeeks:weeks?Number(weeks):null});if(!result.success){setMessage(result.error);return}const updated=await getUser();if(updated)onSaved(updated);setMessage("Målet har sparats.")}catch{setMessage("Kunde inte spara målet. Försök igen.")}finally{setSaving(false)}
  }}>

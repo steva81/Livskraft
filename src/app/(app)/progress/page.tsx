@@ -1,4 +1,5 @@
 "use client"
+import { PageHeading } from "@/components/page-heading"
 import { goalGuidance, goalLabels, progressGuidance } from "@/lib/nutrition"
 import { WeeklyNutrition } from "@/components/weekly-nutrition"
 import { NutritionBalance } from "@/components/nutrition-balance"
@@ -73,13 +74,13 @@ export default function ProgressPage() {
   }
 
   return <Localize>{(
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="app-page max-w-4xl mx-auto space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Framsteg</h1>
+        <PageHeading section="progress" />
         <p className="text-muted-foreground">Trender, mätningar och din adaptiva vecka.</p>
       </div>
 
-      {summary?.ready && <div data-localize="off" className="rounded-xl border p-4"><p className="font-semibold">{goalLabels[language][summary.primaryGoal]}</p><p>{goalGuidance(summary.primaryGoal,language==="en")}</p><p>{progressGuidance(summary.primaryGoal,average!=null&&first!=null?average-first:null,language==="en")}</p></div>}
+      {summary?.ready && <div data-localize="off" className="wellness-intro rounded-3xl border p-5 space-y-2"><p className="font-semibold">{goalLabels[language][summary.primaryGoal]}</p><p>{goalGuidance(summary.primaryGoal,language==="en")}</p><p>{progressGuidance(summary.primaryGoal,average!=null&&first!=null?average-first:null,language==="en")}</p></div>}
       <WeeklyNutrition />
       <NutritionBalance trend />
       <Card><CardHeader><CardTitle>Registrera dagens mätning</CardTitle><CardDescription>Frivilligt. En enskild mätning ändrar inte planen.</CardDescription></CardHeader><CardContent>
@@ -112,7 +113,7 @@ export default function ProgressPage() {
         </CardContent>
       </Card>
 
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-5 md:grid-cols-2">
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2">

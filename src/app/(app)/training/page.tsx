@@ -1,4 +1,6 @@
 "use client"
+import { LifestyleMosaic } from "@/components/lifestyle-mosaic"
+import { PageHeading } from "@/components/page-heading"
 import {profileReadiness} from "@/lib/profile-readiness"
 import {ProfileReadinessCard} from "@/components/profile-readiness"
 import type {PublicUser} from "@/app/actions"
@@ -82,27 +84,30 @@ export default function TrainingPage() {
   }
 
   return <Localize>{(
-    <div className="max-w-4xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Träning</h1>
+    <div className="app-page max-w-4xl mx-auto space-y-6">
+      <div className="warm-intro-layout">
+        <div>
+        <PageHeading section="training" />
         <p className="text-muted-foreground">
           Styrkepass hemma eller på gym — separat från steg och promenader.
         </p>
         {ready&&<p className="text-sm text-muted-foreground mt-2">Utrustning hemma: {preferences.equipment}. Gym innebär vanliga gymmaskiner och fria vikter. Du kan bläddra bland alla nivåer; rekommenderade pass passar din profil och tidsbudget.</p>}
+        </div>
+        <LifestyleMosaic variant="strip" themes={["strength", "balance"]} />
       </div>
 
       <GoalSummary />{user&&<ProfileReadinessCard user={user}/>}
-      <div className="flex gap-4 border-b">
+      <div className="wellness-tabs flex flex-wrap gap-2">
         <button
           aria-pressed={activeTab === "plan"}
-          className={`min-h-11 pb-2 font-medium ${activeTab === "plan" ? "border-b-2 border-primary text-primary" : "text-muted-foreground"}`}
+          className={`min-h-11 rounded-full px-4 py-2 text-sm font-medium ${activeTab === "plan" ? "bg-primary text-white" : "text-muted-foreground"}`}
           onClick={() => setActiveTab("plan")}
         >
           Pass att välja bland
         </button>
         <button
           aria-pressed={activeTab === "log"}
-          className={`min-h-11 pb-2 font-medium ${activeTab === "log" ? "border-b-2 border-primary text-primary" : "text-muted-foreground"}`}
+          className={`min-h-11 rounded-full px-4 py-2 text-sm font-medium ${activeTab === "log" ? "bg-primary text-white" : "text-muted-foreground"}`}
           onClick={() => setActiveTab("log")}
         >
           Träningslogg
@@ -112,7 +117,7 @@ export default function TrainingPage() {
 
       {activeTab === "plan" && (
         <div className="space-y-4">
-          <div className="bg-primary/10 p-4 rounded-lg flex flex-wrap items-center justify-between border border-primary/20 gap-4">
+          <div className="wellness-intro p-5 rounded-3xl flex flex-wrap items-center justify-between border border-primary/20 gap-4">
             <div>
               <h3 className="font-semibold text-primary">Ont om tid idag?</h3>
               <p className="text-sm text-gray-600">

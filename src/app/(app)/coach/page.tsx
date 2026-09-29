@@ -1,4 +1,6 @@
 "use client"
+import { LifestyleMosaic } from "@/components/lifestyle-mosaic"
+import { PageHeading } from "@/components/page-heading"
 import { translate } from "@/lib/i18n/catalog"
 import { Localize, useLanguage } from "@/lib/i18n/provider"
 
@@ -122,26 +124,28 @@ function UserCoachPage() {
   }
 
   return <Localize>{(
-    <div className="max-w-4xl mx-auto flex flex-col gap-4">
+    <div className="app-page max-w-4xl mx-auto flex flex-col gap-4">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Livskraft Coach</h1>
+        <PageHeading section="coach" />
         <p className="text-muted-foreground">Din personliga guide för kost, träning och vardagsrörelse.</p>
       </div>
 
+      <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_220px]"><div className="min-w-0 space-y-5">
       {overviewError && <p role="status" className="text-sm">Kunde inte läsa dagens översikt. Ladda om sidan för att försöka igen.</p>}
       {historyError && <p role="alert" className="text-sm text-red-700">{historyError}</p>}
       {overview&&!overview.ready&&<p data-localize="off" className="rounded-xl border p-4">{language==="en"?"Complete My Plan for personal recommendations. General guidance is available meanwhile.":"Komplettera Min plan för personliga rekommendationer. Under tiden finns allmänna råd."} <a className="underline" href="/my-plan">{language==="en"?"Complete My Plan":"Komplettera min plan"}</a></p>}
-      {overview?.ready && <Card><CardContent className="p-4 space-y-2 text-sm">
+      {overview?.ready && <Card className="wellness-intro"><CardContent className="p-4 space-y-3 text-sm">
+        <LifestyleMosaic variant="strip" themes={["calm", "balance"]} />
         <p className="font-semibold">Hej {overview.name}, vad behöver du idag?</p>
-        <div className="grid gap-2 sm:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-2">
         <p>Nästa måltid: {overview.nextMeal??(overview.hasMealPlan ? "Alla planerade måltider är klara." : "Ingen matplan som matchar din profil just nu.")}</p>
         <p>Träning: {overview.workout??"Vilodag från styrketräning"}</p>
         <p>{overview.steps.toLocaleString(language==="en"?"en-GB":"sv-SE")} av {overview.stepGoal.toLocaleString(language==="en"?"en-GB":"sv-SE")} steg</p>
         </div>
         {mode === "advanced" && <p className="text-muted-foreground">Kostregler: {overview.restrictions.map(displayValue).join(", ") || "Inga angivna"}. Mat du ogillar: {overview.dislikedFoods.join(", ") || "Inga angivna"}.</p>}
       </CardContent></Card>}
-      <Card className="flex flex-col overflow-hidden">
-        <CardContent ref={conversation} role="log" aria-label="Samtal med coachen" aria-live="polite" className="min-h-64 max-h-[50dvh] overflow-y-auto p-4 sm:p-6 space-y-5">
+      <Card className="flex flex-col overflow-hidden border-0 bg-transparent shadow-none">
+        <CardContent ref={conversation} role="log" aria-label="Samtal med coachen" aria-live="polite" className="min-h-64 max-h-[50dvh] overflow-y-auto p-1 sm:p-2 space-y-5">
           {messages.map((msg) => (
             <div
               key={msg.id}
@@ -151,7 +155,7 @@ function UserCoachPage() {
                 className={`min-w-0 max-w-[92%] sm:max-w-[80%] whitespace-pre-wrap break-words p-4 rounded-2xl text-sm leading-7 ${
                   msg.role === "user"
                     ? "bg-primary text-primary-foreground rounded-br-md"
-                    : "bg-[#f1f5ee] rounded-bl-md"
+                    : "bg-white border border-border shadow-sm rounded-bl-md"
                 }`}
               >
                 {msg.role === "coach" && (
@@ -172,7 +176,7 @@ function UserCoachPage() {
           )}
         </CardContent>
 
-        <CardFooter className="p-3 sm:p-4 bg-white border-t">
+        <CardFooter className="mt-4 rounded-3xl border p-3 sm:p-4 bg-white shadow-sm">
           <form onSubmit={handleSubmit} className="flex w-full items-center gap-2">
             <input
               type="text"
@@ -191,22 +195,23 @@ function UserCoachPage() {
       </Card>
 
       {/* Quick-prompt chips */}
-      <div className="grid gap-2 sm:grid-cols-2">
+      <div className="flex flex-wrap gap-2">
         {QUICK_PROMPTS.map((p) => (
           <button
             key={p}
             onClick={() => sendMessage(translate(p,language))}
             disabled={loading || !historyReady}
-            className="text-sm text-left bg-white border rounded-2xl px-4 py-4 hover:bg-gray-50 transition disabled:opacity-50"
+            className="text-sm text-left bg-white border rounded-full px-4 py-3 hover:bg-gray-50 transition disabled:opacity-50"
           >
             {p}
           </button>
         ))}
       </div>
       <p className="text-xs text-muted-foreground">De senaste 50 frågorna och svaren sparas på ditt konto. De senaste 12 meddelandena används som samtalskontext. Undvik att skriva känsliga uppgifter.</p>
-      <Button variant="outline" className="self-start" aria-expanded={showPrevious} onClick={async()=>{if(showPrevious){setShowPrevious(false);return}try{const res=await fetch("/api/coach?history=all",{cache:"no-store"});if(!res.ok)throw new Error();setPreviousMessages((await res.json()).messages);setShowPrevious(true)}catch{setHistoryError("Kunde inte läsa historiken. Ladda om sidan för att försöka igen.")}}}>Tidigare samtal</Button>
+      </div><aside className="wellness-panel min-w-0 space-y-3 p-4"><p data-localize="off" className="wellness-eyebrow">{language==="en"?"CONVERSATIONS":"SAMTAL"}</p>
+      <Button variant="outline" className="w-full" aria-expanded={showPrevious} onClick={async()=>{if(showPrevious){setShowPrevious(false);return}try{const res=await fetch("/api/coach?history=all",{cache:"no-store"});if(!res.ok)throw new Error();setPreviousMessages((await res.json()).messages);setShowPrevious(true)}catch{setHistoryError("Kunde inte läsa historiken. Ladda om sidan för att försöka igen.")}}}>Tidigare samtal</Button>
       {showPrevious && <section className="rounded border p-4 space-y-3 max-h-96 overflow-auto" aria-label="Tidigare samtal">{previousMessages.length ? previousMessages.map(m=><p key={m.id} data-localize="off" className="text-sm whitespace-pre-wrap"><strong>{m.role==="coach"?"Coach":overview?.name}: </strong>{m.text}</p>) : <p>Ingen tidigare historik.</p>}</section>}
-      <Button variant="ghost" className="self-start text-muted-foreground" onClick={clearHistory} disabled={loading || !historyReady || !hasHistory && messages.length < 2}>Radera historik</Button>
+      <Button variant="ghost" className="w-full text-muted-foreground" onClick={clearHistory} disabled={loading || !historyReady || !hasHistory && messages.length < 2}>Radera historik</Button></aside></div>
 
     </div>
   )}</Localize>

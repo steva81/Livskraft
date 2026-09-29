@@ -1,4 +1,6 @@
 "use client"
+import { LifestyleMosaic } from "@/components/lifestyle-mosaic"
+import { PageHeading } from "@/components/page-heading"
 import * as Dialog from "@radix-ui/react-dialog"
 import { translate } from "@/lib/i18n/catalog"
 import { ingredientEnglish } from "@/lib/i18n/ingredients"
@@ -106,20 +108,23 @@ function UserMealsPage() {
 
 
   return <Localize>{(
-    <div className="max-w-4xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Recept</h1>
+    <div className="app-page max-w-4xl mx-auto space-y-6">
+      <div className="warm-intro-layout">
+        <div>
+        <PageHeading section="recipes" />
         <p className="text-muted-foreground">
           Recept som passerar dina hårda kostregler
           {restrictions.length > 0 && ` (${restrictions.map(value=>translate(displayValue(value),language)).join(", ")})`}
         </p>
+        </div>
+        <LifestyleMosaic variant="strip" themes={["cooking", "meal"]} />
       </div>
 
-      <div role="group" aria-label="Recept och inköp" className="flex gap-2"><Button variant={tab==="recipes"?"default":"outline"} aria-pressed={tab==="recipes"} onClick={()=>setTab("recipes")}>Receptförslag</Button><Button variant={tab==="shopping"?"default":"outline"} aria-pressed={tab==="shopping"} onClick={()=>{setTab("shopping");setOpenId(null)}}>Inköpslista</Button></div>
+      <div role="group" aria-label="Recept och inköp" className="wellness-tabs flex flex-wrap gap-2"><Button variant={tab==="recipes"?"default":"outline"} aria-pressed={tab==="recipes"} onClick={()=>setTab("recipes")}>Receptförslag</Button><Button variant={tab==="shopping"?"default":"outline"} aria-pressed={tab==="shopping"} onClick={()=>{setTab("shopping");setOpenId(null)}}>Inköpslista</Button></div>
       <div className="space-y-6">
-        {tab==="recipes" && <div className="space-y-4">
-          <label className="block text-sm">Måltid<select className="border rounded p-2 ml-2" value={mealFilter} onChange={e=>{setMealFilter(e.target.value);setLimit(4)}}>{Object.entries({all:"Alla",breakfast:"Frukost",lunch:"Lunch",dinner:"Middag",snack:"Mellanmål"}).map(([key,label])=><option key={key} value={key}>{label}</option>)}</select></label>
-          <h2 className="text-xl font-semibold">Dina Receptförslag</h2>
+        {tab==="recipes" && <div className="recipe-grid grid gap-4 sm:grid-cols-2">
+          <label className="sm:col-span-2 block text-sm">Måltid<select className="border rounded p-2 ml-2" value={mealFilter} onChange={e=>{setMealFilter(e.target.value);setLimit(4)}}>{Object.entries({all:"Alla",breakfast:"Frukost",lunch:"Lunch",dinner:"Middag",snack:"Mellanmål"}).map(([key,label])=><option key={key} value={key}>{label}</option>)}</select></label>
+          <h2 className="sm:col-span-2 text-xl font-semibold">Dina Receptförslag</h2>
           {recipes.length === 0 ? (
             <Card>
               <CardContent className="p-6 text-center text-muted-foreground">
@@ -134,7 +139,7 @@ function UserMealsPage() {
               const instructions = JSON.parse(recipe.instructions ?? "[]") as string[]
               const open = openId === recipe.id
               return <Localize key={recipe.id}>{(
-                <Card id={`recipe-${recipe.id}`} key={recipe.id} className="scroll-mt-20">
+                <Card id={`recipe-${recipe.id}`} key={recipe.id} className="scroll-mt-20 flex flex-col">
                   <CardHeader className="pb-3">
                     <CardTitle>{recipe.title}</CardTitle>
                     <CardDescription>{recipe.description}</CardDescription>
@@ -145,12 +150,12 @@ function UserMealsPage() {
                         <Clock className="w-4 h-4" /> {recipe.prepTime} min
                       </span>
                       {tags.map((tag) => (
-                        <span key={tag} className="bg-secondary text-secondary-foreground px-2 py-0.5 rounded-md text-xs">
+                        <span key={tag} className="bg-[#f3edcb] text-[#665628] px-3 py-1 rounded-full text-xs">
                           {displayValue(tag)}
                         </span>
                       ))}
                     </div>
-                    <Dialog.Root open={open} onOpenChange={value=>{if(!value){setOpenId(null);window.history.replaceState(null,"","/meals")}}}><Dialog.Portal><Dialog.Overlay className="fixed inset-0 z-50 bg-black/50"/><Dialog.Content className="fixed z-50 inset-x-4 top-[5dvh] mx-auto max-w-2xl max-h-[90dvh] overflow-y-auto rounded-xl bg-white p-5 space-y-4"><Dialog.Title className="text-xl font-semibold">{recipe.title}</Dialog.Title><Dialog.Description>1 receptportion. Tillagningstid: {recipe.prepTime} min.</Dialog.Description><Dialog.Close className="border rounded px-4 min-h-11">Stäng recept</Dialog.Close><p className="text-sm">{tags.map(tag=>translate(displayValue(tag),language)).join(" · ")}</p>
+                    <Dialog.Root open={open} onOpenChange={value=>{if(!value){setOpenId(null);window.history.replaceState(null,"","/meals")}}}><Dialog.Portal><Dialog.Overlay className="fixed inset-0 z-50 bg-[#17291f]/40 backdrop-blur-sm"/><Dialog.Content className="wellness-dialog fixed z-50 inset-x-4 top-[5dvh] mx-auto max-w-2xl max-h-[90dvh] overflow-y-auto rounded-3xl bg-white p-6 space-y-4"><Dialog.Title className="text-xl font-semibold">{recipe.title}</Dialog.Title><Dialog.Description>1 receptportion. Tillagningstid: {recipe.prepTime} min.</Dialog.Description><Dialog.Close className="border rounded px-4 min-h-11">Stäng recept</Dialog.Close><p className="text-sm">{tags.map(tag=>translate(displayValue(tag),language)).join(" · ")}</p>
                     {mode === "advanced" && (
                       <div className="bg-gray-50 p-3 rounded-md text-xs text-gray-600 mb-4 flex flex-wrap gap-4">
                         <span>Näringsvärden per receptportion</span>

@@ -12,7 +12,7 @@ export function NutritionBalance({trend=false,onChanged}: {trend?:boolean;onChan
   const [proposal,setProposal]=useState<Awaited<ReturnType<typeof getNutritionProposal>>|null>(null)
   const [busy,setBusy]=useState(false),[message,setMessage]=useState("")
   const run=async(action:()=>Promise<void>)=>{setBusy(true);setMessage("");try{await action()}catch(e){setMessage(e instanceof Error?e.message:t("Försök igen.","Try again."))}finally{setBusy(false)}}
-  return <section className="space-y-3 rounded-xl border p-4" data-localize="off">
+  return <section className="wellness-panel space-y-3 p-5" data-localize="off">
     <h2 className="font-semibold">{trend?t("Näring i nästa adaptiva vecka","Nutrition in the next adaptive week"):t("Fortsätt i din takt","Continue at your own pace")}</h2>
     <p className="text-sm">{t("Det går alltid bra att fortsätta normalt. Förslag behåller måltider, protein och fibrer. Rörelse är frivilligt för välbefinnande, inte för att betala för mat.","Continuing normally is always an option. Suggestions preserve meals, protein and fibre. Movement is optional for wellbeing, not to pay for food.")}</p>
     <div className="flex flex-wrap gap-2">{(trend?["trend"] as const:["day","week"] as const).map(scope=><Button key={scope} variant="outline" disabled={busy} onClick={()=>void run(async()=>setProposal(await getNutritionProposal(scope)))}>{scope==="trend"?t("Granska veckotrend","Review weekly trend"):scope==="day"?t("Granska varsamt dagsförslag","Review gentle day option"):t("Granska resten av veckan","Review rest of week")}</Button>)}</div>

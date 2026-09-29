@@ -1,0 +1,21 @@
+.collage {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-rows: repeat(3, 96px);
+  gap: 10px;
+  width: 100%;
+  min-width: 0;
+  position: relative;
+}
+.tile {
+  position: relative;
+  overflow: hidden;
+  min-width: 0;
+  border-radius: 20px;
+  background: #e7ecdf;
+  box-shadow: 0 5px 18px #304c3012;
+}
+.tile:first-child { grid-column: span 2; grid-row: span 2; }
+.photo { display: block; width: 100%; height: 100%; object-fit: cover; }
+@media (min-width: 640px) { .collage { grid-template-rows: repeat(3, 125px); gap: 12px; } }
+@media (min-width: 1024px) { .collage { grid-template-rows: repeat(3, 145px); } .tile { border-radius: 26px; } }

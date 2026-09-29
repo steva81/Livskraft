@@ -1,4 +1,5 @@
 "use client"
+import { PageHeading } from "@/components/page-heading"
 import {profileReadiness} from "@/lib/profile-readiness"
 import {ProfileReadinessCard} from "@/components/profile-readiness"
 import { GoalSummary } from "@/components/goal-summary"
@@ -6,7 +7,7 @@ import { Localize, useLanguage } from "@/lib/i18n/provider"
 
 import { useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { CalendarDays, Dumbbell, Utensils } from "lucide-react"
+import { Dumbbell, Utensils } from "lucide-react"
 import { useMode } from "@/lib/ModeContext"
 import { getWeeklyPlan, getWorkouts, getUser, selectPlanMeals } from "@/app/actions"
 import { parsePlannedMeals, selectedSlots, type PlannedMeal } from "@/lib/plan-types"
@@ -74,7 +75,7 @@ export default function WeeklyPlanPage() {
 
   if (planDays.length === 0) {
     return <Localize>{(
-      <div className="max-w-4xl mx-auto p-8 text-center text-muted-foreground">
+      <div className="app-page max-w-4xl mx-auto p-8 text-center text-muted-foreground">
         {error || "Ingen veckoplan hittades. Logga in och öppna sidan igen så skapas en plan automatiskt."}
       </div>
     )}</Localize>
@@ -87,12 +88,11 @@ export default function WeeklyPlanPage() {
 
   return <Localize>{(
     <div className="max-w-4xl mx-auto space-y-6">
+      <PageHeading section="week" />
       <GoalSummary />
       {safety?.message && <p role="alert" className="rounded bg-amber-50 p-3 text-sm text-amber-900">{safety.message}</p>}
       <div>
-        <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-          <CalendarDays className="h-8 w-8 text-primary" /> Veckoplan
-        </h1>
+
         <p className="text-muted-foreground">
           Måndag–söndag med mat, träning och promenad — anpassad efter din vardag och dina kostregler.
         </p>
@@ -100,7 +100,7 @@ export default function WeeklyPlanPage() {
 
       {user && <p className="text-sm text-muted-foreground">Personligt stegmål: {user.stepGoal.toLocaleString(language==="en"?"en-GB":"sv-SE")} steg. {readPreferences(user.preferences).workSchedule!=="dagtid" ? "Lägg måltider och rörelse runt din vakna tid." : "Anpassa måltider efter hunger och vardag."} {parseStringList(user.lifestyle).includes("meal-prep") ? "Förbered gärna morgondagens mat samtidigt." : ""} {parseStringList(user.lifestyle).includes("no-fridge") ? "Använd kylväska eller välj mat nära måltiden när kylskåp saknas." : ""} {parseStringList(user.lifestyle).includes("no-microwave") ? "Välj kall mat bland dina recept eller använd mattermos när mikrovågsugn saknas." : ""}</p>}
       {error && <p role="alert">{error}</p>}
-      <fieldset className="border rounded p-3"><legend>Måltider för hela veckan</legend><SlotChoices value={weekSlots} disabled={saving} onChange={setWeekSlots}/><Button disabled={saving} onClick={()=>saveSlots(weekSlots)}>Använd för veckans alla dagar</Button><p className="text-xs mt-2">Ersätter dagarnas val. Anpassa sedan enskilda dagar nedan.</p></fieldset>
+      <fieldset className="wellness-panel p-5"><legend>Måltider för hela veckan</legend><SlotChoices value={weekSlots} disabled={saving} onChange={setWeekSlots}/><Button disabled={saving} onClick={()=>saveSlots(weekSlots)}>Använd för veckans alla dagar</Button><p className="text-xs mt-2">Ersätter dagarnas val. Anpassa sedan enskilda dagar nedan.</p></fieldset>
       <div className="space-y-4">
         <Button variant="outline" onClick={() => setNextWeek(value => !value)}>{nextWeek ? "Visa denna vecka" : "Visa nästa vecka"}</Button>
         {sorted.map((day) => {
@@ -108,7 +108,7 @@ export default function WeeklyPlanPage() {
           const isToday = day.date.toDateString() === new Date().toDateString()
 
           return <Localize key={day.id}>{(
-            <Card key={day.id} className={isToday ? "border-primary ring-1 ring-primary/30" : ""}>
+            <Card key={day.id} className={isToday ? "border-primary/40 ring-1 ring-primary/10" : ""}>
               <CardHeader className="pb-2">
                 <CardTitle className="flex items-center justify-between">
                   <span className="flex items-center gap-2">
@@ -131,7 +131,7 @@ export default function WeeklyPlanPage() {
                     <div className="flex items-center gap-1.5 text-sm font-medium mb-2 text-muted-foreground">
                       <Utensils className="w-4 h-4" /> Måltider
                     </div>
-                    <div className="space-y-1">
+                    <div className="space-y-3">
                       {day.meals.length === 0 && <p className="text-sm text-muted-foreground">Ingen måltid planerad, eller inget kontrollerat recept matchar dina val. Du planerar bortvalda måltider själv.</p>}
                       {day.meals.map((meal) => (
                         <p key={`${meal.slot}-${meal.recipeId}`} className="text-sm">

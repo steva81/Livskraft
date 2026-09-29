@@ -5,11 +5,11 @@ import { useMode } from "@/lib/ModeContext"
 
 export function ModeControl() {
   const { mode, setMode, modeReady, modeSaving, modeError } = useMode()
-  return <Localize>{<div className="max-w-4xl mx-auto mb-5 text-sm">
+  return <Localize>{<div className="wellness-mode max-w-4xl mx-auto mb-6 text-sm">
     <label className="flex flex-wrap items-center justify-end gap-2">Visningsläge
       <select aria-describedby="mode-help" value={mode} disabled={!modeReady || modeSaving}
         onChange={e => setMode(e.target.value as "simple" | "advanced")}
-        className="border rounded-md bg-white p-2">
+        className="border rounded-full bg-white px-4 py-2">
         <option value="simple">Enkelt</option><option value="advanced">Avancerat</option>
       </select>
     </label>

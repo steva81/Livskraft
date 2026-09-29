@@ -79,3 +79,87 @@
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
 }
+
+/* Home reference: editorial headings, pastel accents and a calm daylight hero. */
+@layer components {
+  .home-reference { color: #233e30; }
+  .home-reference h1, .home-reference h2, .home-reference h3 {
+    font-family: Georgia, "Times New Roman", serif;
+    letter-spacing: -.025em;
+  }
+  .home-welcome {
+    background: linear-gradient(135deg, #edf7e7 0%, #f7f8e9 65%, #fbefd5 100%);
+    box-shadow: 0 2px 3px #34462c05, 0 8px 24px #34462c06;
+  }
+  .home-destination { box-shadow: 0 2px 3px #34462c06, 0 8px 20px #34462c04; }
+  .home-eyebrow { color: #667469; font-size: .6875rem; font-weight: 600; letter-spacing: .12em; }
+  .mobile-nav a { color: #637268; }
+  .mobile-nav a > svg { box-sizing: content-box; padding: 6px 14px; margin-bottom: 2px; border-radius: 999px; }
+  .mobile-nav a[aria-current="page"] { background: transparent; color: #244d36; }
+  .mobile-nav a[aria-current="page"] > svg { background: #d9efdc; }
+  .app-sidebar nav a[aria-current="page"] { background: #e8f2e5; }
+}
+
+/* Shared wellness language across the authenticated product and welcome page. */
+@layer components {
+  .wellness-app { color: #233e30; }
+  .wellness-app h1, .wellness-app h2, .wellness-app h3, .wellness-dialog h2, .brand-link {
+    font-family: Georgia, "Times New Roman", serif; letter-spacing: -.025em;
+  }
+  .wellness-app h1 { font-weight: 600; }
+  .page-heading { padding-block: .25rem .75rem; }
+  .page-heading h1 { margin-top: .4rem; font-size: clamp(1.875rem, 3vw, 2.5rem); line-height: 1.2; }
+  .wellness-eyebrow { color: #657268; font-size: .6875rem; font-weight: 600; letter-spacing: .12em; }
+  .wellness-panel { border: 1px solid hsl(var(--border)); border-radius: 1.5rem; background: white; box-shadow: 0 2px 3px #34462c04, 0 8px 20px #34462c03; }
+  .wellness-intro { background: linear-gradient(120deg, #edf6e7, #faf2dc); }
+  .wellness-summary { background: #f0f5eb; border-color: #dfe7d8; font-size: .875rem; line-height: 1.6; }
+  .wellness-tabs { width: fit-content; max-width: 100%; padding: .35rem; border: 1px solid #e4e6db; border-radius: 1.75rem; background: #f1f2e9; }
+  .settings-jumps a { display: inline-flex; align-items: center; min-height: 44px; padding: .5rem 1rem; background: white; border: 1px solid hsl(var(--border)); border-radius: 999px; }
+  .settings-jumps a:hover { background: #e8f2e5; }
+  .wellness-content label { line-height: 1.6; }
+  .wellness-content label > input:not([type="checkbox"]):not([type="radio"]), .wellness-content label > select, .wellness-content label > textarea { margin-top: .375rem; }
+  .wellness-content input[type="checkbox"], .wellness-content input[type="radio"] { accent-color: hsl(var(--primary)); }
+  .wellness-content [role="alert"] { border-radius: 1rem; }
+  .wellness-content [role="status"]:not(:empty) { line-height: 1.6; }
+  .wellness-content h3 > svg { flex-shrink: 0; }
+  .app-sidebar .brand-link[aria-current="page"] { background: transparent; }
+  .app-sidebar nav a { border-radius: 999px; }
+  .app-sidebar { border-color: #e6e7dd; }
+  .wellness-dialog { color: #233e30; box-shadow: 0 24px 80px #17291f30; }
+}
+
+/* Photo-ready compositions. Unconfigured slots show deliberate themed surfaces, never broken images. */
+@layer components {
+  .lifestyle-mosaic { display: grid; gap: .65rem; min-width: 0; }
+  .lifestyle-tile { position: relative; isolation: isolate; overflow: hidden; min-width: 0; border-radius: 1.4rem; border: 1px solid #ffffffb3; box-shadow: 0 3px 14px #304c3010; background: #e3ebdd; }
+  .lifestyle-tile--cooking { background: #e3ebda; color: #50664b; }
+  .lifestyle-tile--meal { background: #efdfcd; color: #866347; }
+  .lifestyle-tile--balance { background: #e7e0d8; color: #756958; }
+  .lifestyle-tile--strength { background: #dddccf; color: #676849; }
+  .lifestyle-tile--outdoors { background: #d3e2d7; color: #42624e; }
+  .lifestyle-tile--calm { background: #eee8ce; color: #7b734d; }
+  .lifestyle-tile-art { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding-bottom: 2rem; background: radial-gradient(ellipse at 20% 0%, #ffffff80, transparent 75%); }
+  .lifestyle-tile-art::before { content: ""; position: absolute; width: 75%; aspect-ratio: 1; border-radius: 50% 50% 35% 65%; border: 1px solid #ffffff70; transform: rotate(-20deg); }
+  .lifestyle-tile-art svg { width: 2.4rem; height: 2.4rem; }
+  .lifestyle-tile-caption { position: absolute; bottom: .65rem; left: .65rem; right: .65rem; width: fit-content; max-width: calc(100% - 1.3rem); padding: .35rem .55rem; border-radius: .75rem; background: #fffdf5f2; color: #354c3b; font-size: .7rem; line-height: 1.4; font-weight: 500; }
+  .lifestyle-mosaic--welcome { grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: repeat(3, minmax(100px, 1fr)); min-height: 340px; }
+  .lifestyle-mosaic--welcome .lifestyle-tile:first-child { grid-column: span 2; grid-row: span 2; }
+  .lifestyle-mosaic--welcome .lifestyle-tile:first-child svg { width: 4rem; height: 4rem; }
+  .lifestyle-mosaic--home { grid-template-columns: 1.2fr 1fr; grid-template-rows: repeat(2, 85px); }
+  .lifestyle-mosaic--home .lifestyle-tile:first-child { grid-row: span 2; }
+  .lifestyle-mosaic--home .lifestyle-tile:not(:first-child) .lifestyle-tile-art { justify-content: flex-end; padding: 0 1rem 1rem; }
+  .lifestyle-mosaic--home .lifestyle-tile:not(:first-child) svg { width: 1.8rem; height: 1.8rem; }
+  .lifestyle-mosaic--strip { grid-template-columns: repeat(2, minmax(0, 1fr)); height: 90px; }
+  .lifestyle-mosaic--strip .lifestyle-tile-art { justify-content: flex-end; padding-right: 1rem; }
+  .lifestyle-mosaic--strip svg { width: 1.7rem; height: 1.7rem; }
+  .home-welcome-lead, .warm-intro-layout { display: grid; gap: 1.5rem; align-items: center; }
+  #onboarding-fields { scroll-margin-top: 1.5rem; }
+  @media (min-width: 768px) {
+    .home-welcome-lead { grid-template-columns: 1.1fr 1fr; }
+    .warm-intro-layout { grid-template-columns: minmax(0, 1fr) 230px; }
+  }
+  @media (min-width: 1024px) {
+    .lifestyle-mosaic--welcome { min-height: 440px; }
+    .lifestyle-tile-caption { font-size: .75rem; }
+  }
+}

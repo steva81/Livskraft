@@ -108,3 +108,104 @@ Main remains at the original checkpoint. Eleven presentation source files are mo
 The final English exercise-preview fix was verified against the production build at 390, 430, 768 and 1440px. Rendered previews correctly show translated names (including Squat, Push-ups and Lunge); no Swedish preview names, overflow or page errors were found. The 36-check browser matrix plus these four targeted checks total 40 recorded viewport/state checks. Final results are in `ui-browser-final-results.json` alongside the retained screenshots.
 
 The temporary `.tmp-ui-polish.cjs` runner was removed. Its disposable account was removed by its finally handler, and a read-only check confirmed zero remaining UI-polish test accounts. Existing project tests and user data were not removed. Screenshots/JSON outside the repository are retained as verification evidence.
+
+## Reference-based Home follow-up — 28 September 2026
+
+Starting checkpoint for this follow-up was clean main at b1a6873 (the earlier polish had already been committed externally). Only Home and navigation presentation were refined to match the user's screenshot reference: light green/cream hero, local date, serif headings, circular pastel icons, specific destination actions, softer cards and pill-shaped active navigation icons. No dependencies or server/business logic changes.
+
+Returning users see Hej/Hi plus their first name; first visits retain the existing welcome greeting. Profile progress counts the seven actual required readiness items and labels that count explicitly. The progress link does not display fabricated steps or personal recommendations. All six destinations, supplementary links and incomplete-profile guidance remain available.
+
+Validation: lint PASS, TypeScript PASS, production build PASS (existing Webpack cache warnings only), mobile-refinement suite PASS. Headless Edge: 16 Home checks across Swedish/English, complete/incomplete profiles and 390/430/768/1440px, with no horizontal overflow or page errors. First-visit greeting, profile counts and navigation were checked. Mobile and desktop screenshots visually reviewed. Other previously passed suites were not repeated for this focused presentation change.
+
+Evidence: home-reference-390.png, home-reference-1440.png and home-reference-results.json in the existing external visualization folder. Temporary QA runner and its disposable account removed; real project tests and user data preserved. Final follow-up changes: src/app/(app)/home/page.tsx, src/app/globals.css and this report. No commit or push performed.
+
+## Full-app alignment — final state after the no-image correction
+
+This section supersedes the earlier file-count/status summaries. Work continued from the existing uncommitted Home/CSS/report changes without resetting, restoring, discarding, committing or pushing.
+
+### Visual alignment
+
+- Home: prior reference-led layout preserved; aligned page width and cards remain. No generated image is rendered.
+- Today: shared editorial heading and warm next-action panel; food precedes nutrition; a visible own-meal link leads to the existing action; movement and training share a responsive row.
+- Week plan: common heading, soft goal summary, rounded weekly controls and calmer day cards; selections and saved plan content unchanged.
+- Recipes: responsive two-column cards, warm tags, grouped tabs and rounded dialog with existing keyboard/focus handling.
+- Training: common heading, pill-style view controls, warm short-workout panel and preserved expandable instructions.
+- Progress: common heading and consistent guidance, nutrition, measurement and adaptive-week surfaces. Real calculations and chart data unchanged.
+- Coach: soft context panel, white assistant bubbles, green user bubbles, separate composer, wrapping prompt chips and desktop history sidebar (stacked on phones). Requests, history and deletion confirmation unchanged.
+- My Plan: pill-shaped section links, consistent baseline/goal/settings forms, all validation and safety text retained.
+- Profile/account: shared headings, rounded surfaces and clearer profile rows; language, password and sign-out handlers unchanged.
+- Shared shell/components: serif headings, warm canvas, restrained shadows, rounded cards/buttons, green selected navigation, leaf brand mark, consistent spacing. The public welcome page retains the styling already applied before the interruption, with no image.
+
+### Imagery correction
+
+No image generation was used after the correction. The image created before the interruption is not referenced by the app. Its WebP file was preserved outside the project at `C:/Users/Steva/.codex/visualizations/2026/09/27/01a0e4da-1142-7a73-ae49-0078edaba801/unused-wellness-kitchen.webp`; the original generated PNG also remains outside the project. The unused WellnessPhoto component now requires an explicitly supplied source and only prepares a future image slot. No new image asset is shipped in this working tree.
+
+### Targeted verification
+
+- Lint: PASS (an unused icon import found during the interrupted run was removed).
+- TypeScript: PASS.
+- Production build: PASS, all 18 pages; existing Webpack cache snapshot warnings only.
+- Existing mobile-refinement suite: PASS.
+- Existing refinement suite: PASS (My Plan, account, Coach history, language and recipe contracts).
+- Production browser: 60 checks across all 10 app routes, Swedish Simple at 390/430/768/1440px and English Advanced at 390/1440px. No horizontal document/visible-element overflow and no browser page errors.
+- Browser interactions: recipe dialog opening/Escape close; own-meal draft/cancel; keyboard workout disclosure; Coach send/history; incomplete-profile Home/Today/My Plan/Profile: PASS.
+- Representative mobile and desktop screenshots reviewed for all page families. Results: `aligned-browser-results.json`; screenshots: `aligned-*.png`, in the external visualization folder above.
+- Real-device keyboard/safe-area behavior and assistive-technology testing remain recommended. No claim of full accessibility certification. Existing safety explanations make some pages longer than the conceptual screenshots.
+
+### Changed files (including changes preserved from the previous pass)
+
+App pages and shell:
+- src/app/(app)/account/page.tsx
+- src/app/(app)/coach/page.tsx
+- src/app/(app)/dashboard/page.tsx
+- src/app/(app)/home/page.tsx
+- src/app/(app)/layout.tsx
+- src/app/(app)/meals/page.tsx
+- src/app/(app)/my-plan/page.tsx
+- src/app/(app)/plan/page.tsx
+- src/app/(app)/profile/page.tsx
+- src/app/(app)/progress/page.tsx
+- src/app/(app)/training/page.tsx
+- src/app/page.tsx
+- src/app/globals.css
+
+Shared presentation:
+- src/components/ModeControl.tsx
+- src/components/body-data.tsx
+- src/components/goal-editor.tsx
+- src/components/goal-summary.tsx
+- src/components/nutrition-balance.tsx
+- src/components/ui/button.tsx
+- src/components/ui/card.tsx
+- src/components/weekly-nutrition.tsx
+- src/components/page-heading.tsx (new)
+- src/components/wellness-photo.tsx (new, unused future image slot)
+- UI-POLISH-REPORT.md
+
+No dependency, schema, server-action, authentication, nutrition-engine or safety-rule files changed. Temporary editing/QA scripts removed; the browser QA account was deleted in its finally block. Existing project tests and user data preserved. Main remains uncommitted/unpushed with 22 modified files and 2 new components.
+
+## Original lifestyle imagery — 2026-09-28
+
+This update supersedes the earlier no-images / unused image-slot notes. Following the user's explicit correction, six original images were generated with the built-in imagegen tool, then saved in the project BEFORE further UI integration. Conversation references were mood direction only; no reference files were copied into the app. No new dependencies, application logic, real data flows, navigation or safety rules were changed.
+
+Assets: public/images/lifestyle/{cooking,meal,balance,strength,outdoors,calm}.webp (six files, approximately 1.25 MB total). Subjects: cooking at home, relaxed restaurant meal, yoga, strength training, jogging and park walking. Generation prompts and provenance: public/images/lifestyle/README.md. Original full-size PNGs remain in Codex generated_images; only optimized WebP copies are shipped.
+
+Placement:
+- Public welcome and first onboarding step: six-photo mosaic, text and CTA before photos on mobile, two-column composition on desktop.
+- Home: compact three-photo welcome composition.
+- Today and Coach: existing compact intro surfaces now use real image assets.
+- Recipes and Training: small supporting photo pairs beside the introductory text; images do not represent particular recipes or prescribed exercises.
+- Progress, My Plan, Profile and Account: remain focused on functional content.
+
+Captions are Swedish/English, with opaque light surfaces for contrast; photography is decorative and has empty alt text. Rounded clipping and responsive image sizing preserve readability. No empty placeholder mosaic is rendered. The mosaic variant classes are explicitly enumerated so Tailwind includes their dimensions in production.
+
+Files touched by the imagery/welcome work: src/app/page.tsx; src/app/onboarding/page.tsx; src/app/(app)/{home,dashboard,coach,meals,training}/page.tsx; src/app/globals.css; src/components/lifestyle-mosaic.tsx; src/components/wellness-photo.tsx; the six WebP assets and their README; this report. All prior uncommitted full-app polish remains intact.
+
+Verification for the final image integration:
+- ESLint PASS; TypeScript PASS; final production build PASS (including lint/type validation).
+- npm run test:mobile-refinement PASS, including onboarding validation, readiness, account isolation and four-goal flows.
+- 21 final production-browser checks PASS: landing and onboarding at 390/430/768/1440px; Home, Today, Coach, Recipes and Training at 390/1440px; English Home/Recipes/Training at 430px. Images loaded, tile heights validated, no horizontal page overflow and no JavaScript page errors. Representative mobile/desktop screenshots visually reviewed. Evidence: external visualization directory, lifestyle-browser-results.json and lifestyle-*.png.
+- Non-blocking environment notices: Webpack cache snapshot warnings during build; Next recommends optional sharp for production image optimization. No dependency installed.
+- Remaining manual checks: physical iOS/Android scrolling and safe-area behavior, slow-network image loading, final subjective approval of AI-generated people and crops. This is not a full cross-browser/accessibility audit.
+- Temporary editing and browser scripts removed; disposable QA account deleted; temporary server stopped. Real tests and user data retained. No commit or push.
+- Final cumulative state: main, 23 tracked modified files and 10 new files (3 components, 6 WebP images and asset README). All earlier uncommitted work remains.

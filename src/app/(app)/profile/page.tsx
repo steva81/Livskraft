@@ -1,4 +1,5 @@
 "use client"
+import { PageHeading } from "@/components/page-heading"
 import {ProfileReadinessCard} from "@/components/profile-readiness"
 import { bodyLabels } from "@/lib/body-data"
 import { GoalSummary } from "@/components/goal-summary"
@@ -54,10 +55,11 @@ export default function ProfilePage() {
       ["Hälsoanpassning",healthOptions[preferences?.health??"none"]],
     ]},
   ]
-  return <Localize>{<div className="max-w-3xl mx-auto space-y-6">
+  return <Localize>{<div className="app-page settings-page max-w-3xl mx-auto space-y-6">
+      <PageHeading section="profile">Din sparade profil och dina vardagsval.</PageHeading>
       <GoalSummary /><ProfileReadinessCard user={user}/>{!preferences?.planningConfirmed&&<p data-localize="off" className="rounded bg-amber-50 p-4">{language==="en"?"The stored activity, training and daily-life values below may include starting suggestions. Review and confirm them in My Plan before they are used for personal recommendations.":"Sparade aktivitets-, tränings- och vardagsvärden nedan kan innehålla startförslag. Granska och bekräfta dem i Min plan innan de används för personliga rekommendationer."}</p>}
-      <div data-localize="off" className="border rounded p-4"><p>{bodyLabels[language].year}: {preferences?.birthYear??"—"}</p><p>{bodyLabels[language].sex}: {bodyLabels[language][preferences?.sexForEnergy??"undisclosed"]}</p></div>
-    <div><h1 className="text-3xl font-bold">Min profil</h1><p className="text-muted-foreground">Din sparade profil och dina vardagsval.</p></div>
+      <div data-localize="off" className="wellness-panel p-5"><p>{bodyLabels[language].year}: {preferences?.birthYear??"—"}</p><p>{bodyLabels[language].sex}: {bodyLabels[language][preferences?.sexForEnergy??"undisclosed"]}</p></div>
+
     <Card><CardHeader><CardTitle>{user.name}</CardTitle><CardDescription>{user.email}</CardDescription></CardHeader><CardContent>
       {user.email === "anna@demo.com" && <p className="bg-amber-50 text-amber-900 p-3 rounded mb-3">Demokonto med exempeldata.</p>}
       <p className="text-sm mb-3">Visningsläge: {mode === "advanced" ? "Avancerat" : "Enkelt"}. Gym innebär vanliga gymmaskiner och fria vikter; utrustningsvalet gäller hemma.</p>
@@ -66,7 +68,7 @@ export default function ProfilePage() {
       <div className="flex flex-wrap gap-4 mt-4 underline"><Link href="/my-plan">Redigera i Min plan</Link><Link href="/account">Kontoinställningar</Link></div>
     </CardContent></Card>
     {groups.map(group => <Card key={group.title}><CardHeader><CardTitle>{group.title}</CardTitle></CardHeader><CardContent>
-      <dl className="space-y-3">{group.rows.map(([label,value]) => <div key={label} className="grid sm:grid-cols-2 gap-1 text-sm"><dt className="text-muted-foreground">{label}</dt><dd className="font-medium break-words">{value}</dd></div>)}</dl>
+      <dl className="space-y-3">{group.rows.map(([label,value]) => <div key={label} className="grid sm:grid-cols-2 gap-2 border-b border-border/60 pb-3 text-sm last:border-0"><dt className="text-muted-foreground">{label}</dt><dd className="font-medium break-words">{value}</dd></div>)}</dl>
     </CardContent></Card>)}
   </div>}</Localize>
 }

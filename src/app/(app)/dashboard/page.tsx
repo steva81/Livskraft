@@ -1,4 +1,6 @@
 "use client"
+import { LifestyleMosaic } from "@/components/lifestyle-mosaic"
+import { PageHeading } from "@/components/page-heading"
 import { Localize, useLanguage } from "@/lib/i18n/provider"
 
 import { savedGoalSafety } from "@/lib/goal-safety"
@@ -62,7 +64,7 @@ export default function DashboardPage() {
     return <Localize>{<div className="p-8 text-center text-muted-foreground">Kunde inte ladda din dag. Logga in igen.</div>}</Localize>
   }
 
-  if(!profileReadiness(user).ready)return <div className="mx-auto max-w-3xl space-y-5"><h1 className="text-3xl font-bold">{language==="en"?"Today":"Idag"}</h1><ProfileReadinessCard user={user}/><p>{language==="en"?"General guidance: eat regularly and make room for rest. Your own meals can still be logged below.":"Allmän vägledning: ät regelbundet och ge plats för vila. Du kan fortfarande registrera egen mat nedan."}</p><DailyNutrition/></div>
+  if(!profileReadiness(user).ready)return <div className="mx-auto max-w-3xl space-y-5"><PageHeading section="today" /><ProfileReadinessCard user={user}/><p>{language==="en"?"General guidance: eat regularly and make room for rest. Your own meals can still be logged below.":"Allmän vägledning: ät regelbundet och ge plats för vila. Du kan fortfarande registrera egen mat nedan."}</p><DailyNutrition/></div>
   const goalSafety = savedGoalSafety(user)
   const stepProgress = Math.min((todayLog.steps / user.stepGoal) * 100, 100)
   const eaten = (() => {
@@ -74,25 +76,25 @@ export default function DashboardPage() {
   })()
 
   return <Localize>{(
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="app-page max-w-4xl mx-auto space-y-6">
       {goalSafety?.message && <div role="alert" className="rounded bg-amber-50 p-3 text-sm text-amber-900"><p>{goalSafety.message}</p><Link href="/my-plan" className="underline">Ändra målet i Min plan</Link></div>}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Idag</h1>
+          <PageHeading section="today" />
           <p className="text-muted-foreground">{language==="en"?"Your day, at your pace.":"Din dag, i din takt."}</p>
         </div>
       </div>
 
-      <div className="rounded-2xl border border-primary/15 bg-[#edf3e9] p-6 space-y-3"><p className="text-lg font-semibold text-primary">Nästa steg: {meals.find(m => !eaten.includes(`${m.slot}:${m.recipeId}`) && !eaten.includes(m.title))?.title ?? "Fortsätt med rörelse eller återhämtning i din takt."}</p><p className="text-sm">Dagen behöver inte bli perfekt. Fortsätt med nästa vanliga måltid eller pass.</p><Link className="text-primary underline text-sm" href="/meals">Kontrollera veckans ingredienser och inköpslista</Link></div>
-      <DailyNutrition refreshKey={todayLog.mealsEaten ?? ""} onPlanChanged={async()=>{const day=await getTodayPlanContext();setMeals(day.meals);setWorkout(day.workout);setActivity(day.activity)}} />
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        <Card className="col-span-1 lg:col-span-2">
+      <div className="wellness-intro rounded-3xl border p-6"><div className="warm-intro-layout"><div className="space-y-3"><p className="text-lg font-semibold text-primary">Nästa steg: {meals.find(m => !eaten.includes(`${m.slot}:${m.recipeId}`) && !eaten.includes(m.title))?.title ?? "Fortsätt med rörelse eller återhämtning i din takt."}</p><p className="text-sm">Dagen behöver inte bli perfekt. Fortsätt med nästa vanliga måltid eller pass.</p><Link className="text-primary underline text-sm" href="/meals">Kontrollera veckans ingredienser och inköpslista</Link></div><LifestyleMosaic variant="strip" themes={["outdoors", "calm"]} /></div></div>
+
+      <div className="grid gap-5 md:grid-cols-2">
+        <Card className="md:col-span-2">
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2">
               <Utensils className="h-5 w-5 text-primary" />
               Dagens måltider
             </CardTitle>
-            <CardDescription>Dina måltider för idag, filtrerade efter dina kostregler</CardDescription>
+            <CardDescription>Dina måltider för idag, filtrerade efter dina kostregler</CardDescription><Link href="#daily-nutrition" className="inline-flex min-h-11 items-center self-start rounded-full bg-secondary px-4 text-sm font-medium text-primary">{language==="en"?"Add own meal":"Lägg till egen måltid"}</Link>
           </CardHeader>
           <CardContent className="space-y-4">
             {meals.length === 0 && (
@@ -120,6 +122,8 @@ export default function DashboardPage() {
             })}
           </CardContent>
         </Card>
+
+        <div id="daily-nutrition" className="md:col-span-2 scroll-mt-6"><DailyNutrition refreshKey={todayLog.mealsEaten ?? ""} onPlanChanged={async()=>{const day=await getTodayPlanContext();setMeals(day.meals);setWorkout(day.workout);setActivity(day.activity)}} /></div>
 
         <Card>
           <CardHeader className="pb-3">
@@ -149,7 +153,7 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="col-span-1 lg:col-span-3">
+        <Card className="col-span-1">
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2">
               <Dumbbell className="h-5 w-5 text-primary" />
