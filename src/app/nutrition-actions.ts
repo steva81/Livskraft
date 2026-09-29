@@ -9,6 +9,7 @@ import { type BodyData, validBodyData } from "@/lib/body-data"
 import { readPreferences } from "@/lib/preferences"
 import { primaryGoal } from "@/lib/nutrition"
 import { startOfWeekMonday } from "@/lib/plan-types"
+import { createHash } from "node:crypto"
 
 export type OwnMealInput = { id?: string; name: string; components: string; portion: string; mealType: string; eatenAt: string; nutrition: Nutrition }
 async function identity() {
@@ -17,6 +18,29 @@ async function identity() {
   return id
 }
 export async function getDailyNutrition() { return dailyNutritionForUser(await identity()) }
+// A stable per-draft token makes a lost response or double-click safe to retry.
+// Only reviewed text/nutrients are accepted; the photo and provider response are never persisted.
+export async function savePhotoMeal(input: { token: string; name: string; components: string; portion: string; mealType: string; nutrition: Nutrition }) {
+  const userId = await identity()
+  if (!input || typeof input.token !== "string" || !/^[a-f0-9-]{36}$/i.test(input.token) ||
+    typeof input.name !== "string" || !input.name.trim() || input.name.length > 120 ||
+    typeof input.components !== "string" || input.components.length > 2000 ||
+    typeof input.portion !== "string" || input.portion.length > 200 ||
+    !["breakfast", "lunch", "dinner", "snack", "other"].includes(input.mealType)) throw new Error("Kontrollera måltiden / Check the meal")
+  const nutrition: Nutrition = { calories: null, protein: null, carbs: null, fat: null, fibre: null }
+  for (const key of ["calories", "protein", "carbs", "fat", "fibre"] as const) {
+    const value = input.nutrition?.[key]
+    if (key === "fibre" && value === null) continue
+    if (typeof value !== "number" || !Number.isFinite(value) || value < 0 || value > (key === "calories" ? 10000 : 1000)) throw new Error("Kontrollera näringsvärden / Check nutrition values")
+    nutrition[key] = value
+  }
+  const id = `photo-${createHash("sha256").update(JSON.stringify([userId,input.token])).digest("hex")}`
+  await prisma.ownMeal.upsert({ where: { id }, update: {}, create: {
+    id, userId, name: input.name.trim(), components: input.components.trim(), portion: input.portion.trim(), mealType: input.mealType,
+    eatenAt: new Date(), nutrition: JSON.stringify(nutrition),
+  } })
+  revalidatePath("/", "layout")
+}
 export async function saveOwnMeal(input: OwnMealInput) {
   const userId = await identity()
   if (!input || typeof input.name !== "string" || !input.name.trim() || input.name.length > 120 ||

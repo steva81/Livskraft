@@ -62,7 +62,7 @@ async function main(){
  assert(!source('components/goal-editor.tsx').includes('setCurrentWeight'));assert(source('components/goal-editor.tsx').includes('href="#body"'))
  assert(photo.includes('Ta foto eller välj bild'));assert(photo.includes('Take a photo or choose an image'));assert(photo.includes('capture="environment"'));assert(photo.includes('URL.createObjectURL'));assert(photo.includes('URL.revokeObjectURL'));assert(photo.includes('className="sr-only" type="file"'));assert(photo.includes('Remove image'));assert(photo.includes('Previous meals'));assert(!photo.includes('requires a configured provider'))
  assert(photo.includes('<details><summary>'));assert(source('app/(app)/home/page.tsx').includes('ProfileReadinessCard'));assert(source('app/(app)/dashboard/page.tsx').includes('!profileReadiness(user).ready'))
- assert(!source('app/(app)/layout.tsx').includes('<header'));assert.equal(require('../src/lib/photo-meals').photoMealProvider.available,false)
- console.log('PASS language inheritance, route/field rendering contracts, single weight editor, mobile navigation and unchanged local camera/photo architecture')
+ assert(!source('app/(app)/layout.tsx').includes('<header'));assert(source('lib/photo-meal-provider.ts').includes('import "server-only"'));assert(photo.includes('Analysera bild med AI'));assert(photo.includes('Add to today'))
+ console.log('PASS language inheritance, route/field rendering contracts, single weight editor, mobile navigation and camera/photo disclosure and confirmation contracts')
 }
 main().catch(e=>{console.error(e);process.exitCode=1}).finally(async()=>{await prisma.user.deleteMany({where:{id:{in:ids}}});await prisma.$disconnect()})

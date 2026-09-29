@@ -5,7 +5,7 @@ const resolve=Module._resolveFilename
 Module._resolveFilename=function(request,...args){return resolve.call(this,request.startsWith('@/')?path.resolve('src',request.slice(2)):request,...args)}
 let identity=null
 const load=Module._load
-Module._load=function(request,...args){if(request==='@/lib/auth')return {getAuthenticatedUserId:async()=>identity};if(request==='next/cache')return {revalidatePath(){}};return load.call(this,request,...args)}
+Module._load=function(request,...args){if(request==='server-only')return {};if(request==='@/lib/auth')return {getAuthenticatedUserId:async()=>identity};if(request==='next/cache')return {revalidatePath(){}};return load.call(this,request,...args)}
 const prisma=require('../src/lib/prisma').default
 const actions=require('../src/app/actions'), meals=require('../src/app/nutrition-actions')
 const {nutritionTarget,primaryGoals,primaryGoal,parseNutrition,totalNutrition,weightTrend}=require('../src/lib/nutrition')
@@ -13,7 +13,7 @@ const {ageFromBirthYear,bodyLabels}=require('../src/lib/body-data')
 const {readPreferences,defaultPreferences}=require('../src/lib/preferences')
 const {getCoachReply}=require('../src/lib/coach-service')
 const {encodeMeals,startOfWeekMonday}=require('../src/lib/plan-types')
-const {photoMealProvider}=require('../src/lib/photo-meals')
+const {photoMealProvider}=require('../src/lib/photo-meal-provider')
 const users=[],recipes=[]
 async function main(){
  const year=new Date().getFullYear(), profile={currentWeight:80,targetWeight:80,timeframeWeeks:26,height:180,activityLevel:'moderate',trainingLevel:'beginner',trainingLocation:'home',preferences:JSON.stringify({...defaultPreferences,planningConfirmed:true,birthYear:year-40,sexForEnergy:'male',primaryGoal:'maintain'})}
@@ -27,7 +27,7 @@ async function main(){
  assert.equal(weightTrend([{date:new Date(),weight:80}]),null)
  assert.equal(totalNutrition([parseNutrition('{}'),parseNutrition('{"calories":300}')]).unknown.calories,1)
  assert.equal(bodyLabels.sv.undisclosed,'Vill inte ange');assert.equal(bodyLabels.en.undisclosed,'Prefer not to say')
- assert.equal(photoMealProvider.available,false);await assert.rejects(photoMealProvider.analyze(new Blob()))
+ delete process.env.PHOTO_AI_API_KEY;delete process.env.PHOTO_AI_MODEL;assert.equal(photoMealProvider().available,false);await assert.rejects(photoMealProvider().analyze(new Uint8Array(),'image/jpeg','sv'))
  console.log('PASS four goals, formula coefficients, age derivation, missing baseline data, confidence, protein, incomplete totals, labels and photo fallback')
  const skippedEmail=`next-skipped-${Date.now()}@example.invalid`
  assert.equal((await actions.submitOnboarding({name:'Optional baseline test',email:skippedEmail,password:'Local-test-only-123',currentWeight:'',height:'',preferences:{...defaultPreferences,primaryGoal:'maintain'}})).success,false)
