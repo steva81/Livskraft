@@ -39,23 +39,59 @@ export default function TrainingPage() {
   const [savingId, setSavingId] = useState<string | null>(null)
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState("")
+  const [retryKey, setRetryKey] = useState(0)
 
   useEffect(() => {
     if (sessionStatus === "loading") return
-    Promise.all([getWorkouts(), getWorkoutLogs(), getUser()]).then(([w, l, u]) => {
-      setUser(u)
-      setWorkouts(w)
-      setLogs(l)
-      setPreferredLevel(u?.trainingLevel ?? "beginner")
-      setPreferences(readPreferences(u?.preferences??null))
-      setPreferredPlace(u?.trainingLocation ?? "both")
-      if (u && profileReadiness(u).ready && (u.trainingLocation === "home" || u.trainingLocation === "gym")) {
-        setPlaceFilter(u.trainingLocation)
-        setPreferredPlace(u.trainingLocation)
+
+    let active = true
+
+    const loadTraining = async () => {
+      setLoading(true)
+      setLoadError("")
+
+      try {
+        const [w, l, u] = await Promise.all([
+          getWorkouts(),
+          getWorkoutLogs(),
+          getUser(),
+        ])
+
+        if (!active) return
+
+        setUser(u)
+        setWorkouts(w)
+        setLogs(l)
+        setPreferredLevel(u?.trainingLevel ?? "beginner")
+        setPreferences(readPreferences(u?.preferences ?? null))
+        setPreferredPlace(u?.trainingLocation ?? "both")
+
+        if (
+          u &&
+          profileReadiness(u).ready &&
+          (u.trainingLocation === "home" || u.trainingLocation === "gym")
+        ) {
+          setPlaceFilter(u.trainingLocation)
+          setPreferredPlace(u.trainingLocation)
+        }
+      } catch {
+        if (active) {
+          setLoadError("Kunde inte ladda träningen. Försök igen.")
+        }
+      } finally {
+        if (active) {
+          setLoading(false)
+        }
       }
-      setLoading(false)
-    })
-  }, [userId, sessionStatus])
+    }
+
+    void loadTraining()
+
+    return () => {
+      active = false
+    }
+  }, [userId, sessionStatus, retryKey])
 
   const handleLogWorkout = async (workoutId: string) => {
     setSavingId(workoutId)
@@ -82,7 +118,18 @@ export default function TrainingPage() {
   if (sessionStatus === "loading" || loading) {
     return <Localize>{<div className="p-8 text-center text-muted-foreground">Laddar träningsplan...</div>}</Localize>
   }
-
+  if (loadError) {
+    return (
+      <Localize>
+        <div className="p-8 text-center space-y-4">
+          <p role="alert" className="text-red-700">{loadError}</p>
+          <Button onClick={() => setRetryKey((value) => value + 1)}>
+            Försök igen
+          </Button>
+        </div>
+      </Localize>
+    )
+  }
   return <Localize>{(
     <div className="app-page max-w-4xl mx-auto space-y-6">
       <div className="warm-intro-layout">

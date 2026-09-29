@@ -32,23 +32,55 @@ export default function DashboardPage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState("")
+  const [retryKey, setRetryKey] = useState(0)
 
   useEffect(() => {
     if (sessionStatus === "loading") return
+
     if (!userId) {
       setLoading(false)
       return
     }
-    Promise.all([getUser(), getTodayData(), getTodayPlanContext()]).then(([u, log, plan]) => {
-      setUser(u)
-      setTodayLog(log)
-      setMeals(plan.meals)
-      setWorkout(plan.workout)
-      setActivity(plan.activity)
-      setStepInput(String(log?.steps ?? 0))
-      setLoading(false)
-    })
-  }, [userId, sessionStatus])
+
+    let active = true
+
+    const loadToday = async () => {
+      setLoading(true)
+      setLoadError("")
+
+      try {
+        const [u, log, plan] = await Promise.all([
+          getUser(),
+          getTodayData(),
+          getTodayPlanContext(),
+        ])
+
+        if (!active) return
+
+        setUser(u)
+        setTodayLog(log)
+        setMeals(plan.meals)
+        setWorkout(plan.workout)
+        setActivity(plan.activity)
+        setStepInput(String(log?.steps ?? 0))
+      } catch {
+        if (active) {
+          setLoadError("Kunde inte ladda din dag. Försök igen.")
+        }
+      } finally {
+        if (active) {
+          setLoading(false)
+        }
+      }
+    }
+
+    void loadToday()
+
+    return () => {
+      active = false
+    }
+  }, [userId, sessionStatus, retryKey])
 
   const handleAddSteps = async () => {
     setSaving(true)
@@ -59,6 +91,19 @@ export default function DashboardPage() {
 
   if (sessionStatus === "loading" || loading) {
     return <Localize>{<div className="p-8 text-center text-muted-foreground">Laddar din dag...</div>}</Localize>
+  }
+
+  if (loadError) {
+    return (
+      <Localize>
+        <div className="p-8 text-center space-y-4">
+          <p role="alert" className="text-red-700">{loadError}</p>
+          <Button onClick={() => setRetryKey((value) => value + 1)}>
+            Försök igen
+          </Button>
+        </div>
+      </Localize>
+    )
   }
 
   if (!user || !todayLog) {
