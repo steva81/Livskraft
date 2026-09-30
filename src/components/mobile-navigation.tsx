@@ -32,8 +32,8 @@ export function MobileNavigation() {
       {href:"/training",label:en?"Training":"Träning",Icon:Dumbbell},
     ].map(({href,label,Icon})=><NavigationLink key={href} href={href} className="flex min-w-0 flex-col items-center p-2 text-xs text-gray-500 hover:text-primary"><Icon aria-hidden="true" className="h-5 w-5 mb-1"/>{label}</NavigationLink>)}
     <button ref={toggle} type="button" aria-expanded={open} aria-controls="mobile-more" className="flex min-h-12 min-w-0 flex-col items-center p-2 text-xs text-gray-500 hover:text-primary" onClick={()=>setOpen(!open)}><MoreHorizontal aria-hidden="true" className="h-5 w-5 mb-1"/>{en?"More":"Mer"}</button>
-    {open&&<div ref={menu} id="mobile-more" className="absolute bottom-full inset-x-0 max-h-[60dvh] overflow-y-auto border bg-white p-3 shadow-lg grid grid-cols-2 gap-2">
-      {moreDestinations.map(item=><NavigationLink key={item.href} href={item.href} className="flex items-center min-h-12 rounded p-3 text-sm hover:bg-gray-100" onClick={()=>setOpen(false)}>{en?item.en:item.sv}</NavigationLink>)}
+    {open&&<div ref={menu} id="mobile-more" className="absolute bottom-full inset-x-0 mb-2 mx-4 max-h-[60dvh] overflow-y-auto rounded-2xl border bg-white p-4 shadow-[0_8px_30px_rgb(0,0,0,0.12)] grid grid-cols-2 gap-3">
+      {moreDestinations.map(item=><NavigationLink key={item.href} href={item.href} className="flex items-center justify-center text-center font-medium min-h-[3.5rem] rounded-xl bg-[#f7f9f5] text-[#244d36] hover:bg-[#eaf2ec] transition-colors" onClick={()=>setOpen(false)}>{en?item.en:item.sv}</NavigationLink>)}
     </div>}
   </nav>
 }

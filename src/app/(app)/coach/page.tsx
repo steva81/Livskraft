@@ -145,8 +145,8 @@ function UserCoachPage() {
         </div>
       </div>
 
-      <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_220px]"><div className="min-w-0 space-y-5">
-      {historyReady&&aiCoachEnabled!==true&&<p data-localize="off" className="text-sm text-muted-foreground">{language==="en"?"AI Coach is off. You can activate it in Account settings.":"AI Coach är avstängd. Du kan aktivera den under Kontoinställningar."} <a className="underline" href="/account">{language==="en"?"Open Account settings":"Öppna Kontoinställningar"}</a></p>}
+      <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_220px]"><div className="min-w-0 flex flex-col gap-5">
+      {historyReady&&aiCoachEnabled!==true&&<div data-localize="off" className="rounded-2xl border border-[#d3dfd6] bg-[#fcfdfa] p-5 shadow-sm"><div className="flex items-center gap-3 mb-2"><Leaf className="h-5 w-5 text-[#244d36]"/><h3 className="font-semibold text-[#244d36]">{language==="en"?"AI Coach is off":"AI Coach är avstängd"}</h3></div><p className="text-sm text-[#465c4c] mb-4">{language==="en"?"You can activate AI Coach in Account settings to get personal, conversational responses about food, training and wellness.":"Du kan aktivera AI Coach under Kontoinställningar för att få personliga, samtalande svar om mat, träning och hälsa."}</p><a className="inline-flex h-9 items-center justify-center rounded-lg bg-[#244d36] px-4 text-sm font-medium text-white transition-colors hover:bg-[#1a3827]" href="/account">{language==="en"?"Open Account settings":"Öppna Kontoinställningar"}</a></div>}
       {overviewError && <p role="status" className="text-sm">Kunde inte läsa dagens översikt. Ladda om sidan för att försöka igen.</p>}
       {historyError && <p role="alert" className="text-sm text-red-700">{historyError}</p>}
       {overview&&!overview.ready&&<p data-localize="off" className="rounded-xl border p-4">{language==="en"?"Complete My Plan for personal recommendations. General guidance is available meanwhile.":"Komplettera Min plan för personliga rekommendationer. Under tiden finns allmänna råd."} <a className="underline" href="/my-plan">{language==="en"?"Complete My Plan":"Komplettera min plan"}</a></p>}
@@ -159,23 +159,23 @@ function UserCoachPage() {
         </div>
         {mode === "advanced" && <p className="text-[#617064] mt-2">Kostregler: {overview.restrictions.map(displayValue).join(", ") || "Inga angivna"}. Mat du ogillar: {overview.dislikedFoods.join(", ") || "Inga angivna"}.</p>}
       </div>}
-      <Card className="flex flex-col overflow-hidden border-0 bg-transparent shadow-none">
-        <CardContent ref={conversation} role="log" aria-label="Samtal med coachen" aria-live="polite" className="min-h-64 max-h-[50dvh] overflow-y-auto p-1 sm:p-2 space-y-5">
+      <Card className="flex flex-col overflow-hidden border border-[#e6eadd] bg-[#fcfdfa] shadow-sm rounded-3xl">
+        <CardContent ref={conversation} role="log" aria-label="Samtal med coachen" aria-live="polite" className="min-h-64 max-h-[50dvh] overflow-y-auto p-4 sm:p-6 space-y-6">
           {messages.map((msg) => (
             <div
               key={msg.id}
               className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
             >
               <div
-                className={`min-w-0 max-w-[92%] sm:max-w-[80%] whitespace-pre-wrap break-words p-4 rounded-2xl text-sm leading-7 ${
+                className={`min-w-0 max-w-[92%] sm:max-w-[75%] whitespace-pre-wrap break-words p-4 sm:p-5 rounded-2xl text-[0.9375rem] leading-relaxed shadow-sm ${
                   msg.role === "user"
-                    ? "bg-primary text-primary-foreground rounded-br-md"
-                    : "bg-white border border-border shadow-sm rounded-bl-md"
+                    ? "bg-[#244d36] text-white rounded-br-sm"
+                    : "bg-white border border-[#e6eadd] text-[#244d36] rounded-bl-sm"
                 }`}
               >
                 {msg.role === "coach" && (
-                  <div className="flex items-center gap-1.5 mb-1 text-xs font-semibold text-primary">
-                    <Leaf className="w-3 h-3" /> Coach
+                  <div className="flex items-center gap-1.5 mb-2 text-xs font-semibold text-[#617064] uppercase tracking-wider">
+                    <Leaf className="w-3.5 h-3.5 text-[#244d36]" /> Coach
                   </div>
                 )}
                 {msg.role==="user"?<span data-localize="off">{msg.text}</span>:<CoachText text={msg.text}/>}
@@ -184,51 +184,53 @@ function UserCoachPage() {
           ))}
           {loading && (
             <div className="flex justify-start">
-              <div className="bg-muted p-3 rounded-xl text-sm text-muted-foreground animate-pulse">
-                Skriver…
+              <div className="bg-white border border-[#e6eadd] px-5 py-4 rounded-2xl rounded-bl-sm text-sm text-[#617064] shadow-sm flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-[#244d36] animate-bounce" style={{animationDelay:"0ms"}}></div>
+                <div className="w-2 h-2 rounded-full bg-[#244d36] animate-bounce" style={{animationDelay:"150ms"}}></div>
+                <div className="w-2 h-2 rounded-full bg-[#244d36] animate-bounce" style={{animationDelay:"300ms"}}></div>
               </div>
             </div>
           )}
         </CardContent>
 
-        <CardFooter className="mt-4 rounded-3xl border p-3 sm:p-4 bg-white shadow-sm">
-          <form onSubmit={handleSubmit} className="flex w-full items-center gap-2">
+        <CardFooter className="mt-0 border-t border-[#e6eadd] bg-white p-4">
+          <form onSubmit={handleSubmit} className="flex w-full items-center gap-3">
             <input
               type="text"
               maxLength={2000} aria-label="Din fråga till coachen"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder={historyReady&&aiCoachEnabled!==true?(language==="en"?"AI Coach is off.":"AI Coach är avstängd."):translate("Skriv din fråga…",language)}
-              className="min-w-0 flex-1 bg-white border border-input rounded-xl h-12 px-4 text-base focus:outline-none focus:ring-2 focus:ring-ring"
+              className="min-w-0 flex-1 bg-[#f7f9f5] border border-[#d3dfd6] rounded-xl h-12 px-4 text-[0.9375rem] focus:outline-none focus:ring-2 focus:ring-[#244d36] disabled:opacity-50"
               disabled={loading || !historyReady || aiCoachEnabled!==true}
             />
-            <Button type="submit" size="icon" className="h-12 w-12" aria-label="Skicka fråga" disabled={loading || !historyReady || aiCoachEnabled!==true || !input.trim()}>
-              <Send className="h-4 w-4" />
+            <Button type="submit" size="icon" className="h-12 w-12 shrink-0 rounded-xl bg-[#244d36] hover:bg-[#1a3827] text-white disabled:opacity-50 shadow-sm" aria-label="Skicka fråga" disabled={loading || !historyReady || aiCoachEnabled!==true || !input.trim()}>
+              <Send className="h-5 w-5" />
             </Button>
           </form>
         </CardFooter>
       </Card>
 
-      <div className="mt-2">
-        <p className="text-sm font-medium text-[#244d36] mb-3">{language==="en"?"Need inspiration? Try asking:":"Behöver du inspiration? Prova att fråga:"}</p>
-        <div className="flex flex-wrap gap-2">
+      <div className="mt-2 space-y-4">
+        <p className="text-sm font-medium text-[#244d36]">{language==="en"?"Need inspiration? Try asking:":"Behöver du inspiration? Prova att fråga:"}</p>
+        <div className="flex flex-wrap gap-2.5">
           {QUICK_PROMPTS.map((p) => (
             <button
               key={p}
               onClick={() => sendMessage(translate(p,language))}
               disabled={loading || !historyReady || aiCoachEnabled!==true}
-              className="text-sm text-left bg-[#f0f5eb] border border-[#dfe7d8] text-[#244d36] rounded-xl px-4 py-3 hover:bg-[#e4eedb] transition disabled:opacity-50"
+              className="text-sm text-left bg-white border border-[#d3dfd6] text-[#354c3b] rounded-xl px-4 py-2.5 shadow-sm hover:border-[#244d36] hover:bg-[#f0f5eb] transition-all disabled:opacity-50 disabled:hover:bg-white disabled:hover:border-[#d3dfd6]"
             >
               {p}
             </button>
           ))}
         </div>
       </div>
-      <p className="text-xs text-muted-foreground">De senaste 50 frågorna och svaren sparas på ditt konto. De senaste 12 meddelandena används som samtalskontext. Undvik att skriva känsliga uppgifter.</p>
-      </div><aside className="wellness-panel min-w-0 space-y-3 p-4"><p data-localize="off" className="wellness-eyebrow">{language==="en"?"CONVERSATIONS":"SAMTAL"}</p>
-      <Button variant="outline" className="w-full" aria-expanded={showPrevious} onClick={async()=>{if(showPrevious){setShowPrevious(false);return}try{const res=await fetch("/api/coach?history=all",{cache:"no-store"});if(!res.ok)throw new Error();setPreviousMessages((await res.json()).messages);setShowPrevious(true)}catch{setHistoryError("Kunde inte läsa historiken. Ladda om sidan för att försöka igen.")}}}>Tidigare samtal</Button>
-      {showPrevious && <section className="rounded border p-4 space-y-3 max-h-96 overflow-auto" aria-label="Tidigare samtal">{previousMessages.length ? previousMessages.map(m=><p key={m.id} data-localize="off" className="text-sm whitespace-pre-wrap"><strong>{m.role==="coach"?"Coach":overview?.name}: </strong>{m.text}</p>) : <p>Ingen tidigare historik.</p>}</section>}
-      <Button variant="ghost" className="w-full text-muted-foreground" onClick={clearHistory} disabled={loading || !historyReady || !hasHistory && messages.length < 2}>Radera historik</Button></aside></div>
+      <p className="text-xs text-[#617064] leading-relaxed">De senaste 50 frågorna och svaren sparas på ditt konto. De senaste 12 meddelandena används som samtalskontext. Undvik att skriva känsliga uppgifter.</p>
+      </div><aside className="wellness-panel min-w-0 p-5 space-y-4"><p data-localize="off" className="text-[0.6875rem] font-bold tracking-widest text-[#617064] uppercase">{language==="en"?"CONVERSATIONS":"SAMTAL"}</p>
+      <Button variant="outline" className="w-full h-11 rounded-xl border-[#d3dfd6] text-[#244d36] hover:bg-[#f0f5eb]" aria-expanded={showPrevious} onClick={async()=>{if(showPrevious){setShowPrevious(false);return}try{const res=await fetch("/api/coach?history=all",{cache:"no-store"});if(!res.ok)throw new Error();setPreviousMessages((await res.json()).messages);setShowPrevious(true)}catch{setHistoryError("Kunde inte läsa historiken. Ladda om sidan för att försöka igen.")}}}>Tidigare samtal</Button>
+      {showPrevious && <section className="rounded-xl border border-[#e6eadd] bg-[#fcfdfa] p-4 space-y-4 max-h-96 overflow-auto" aria-label="Tidigare samtal">{previousMessages.length ? previousMessages.map(m=><p key={m.id} data-localize="off" className="text-sm text-[#354c3b] leading-relaxed whitespace-pre-wrap"><strong className="text-[#244d36]">{m.role==="coach"?"Coach":overview?.name}: </strong>{m.text}</p>) : <p className="text-sm text-[#617064]">Ingen tidigare historik.</p>}</section>}
+      <Button variant="ghost" className="w-full h-11 rounded-xl text-[#617064] hover:bg-[#f0f5eb] hover:text-[#244d36]" onClick={clearHistory} disabled={loading || !historyReady || (!hasHistory && messages.length < 2)}>Radera historik</Button></aside></div>
 
     </div>
   )}</Localize>

@@ -46,14 +46,14 @@ export function MealCamera({en,onUse,onClose}:{en:boolean;onUse:(file:File)=>voi
       stop();const file=new File([blob],"meal-camera.jpg",{type:"image/jpeg"});setStill(file);setUrl(URL.createObjectURL(file))
     },"image/jpeg",0.9)
   }
-  return <section aria-label={t("Måltidskamera","Meal camera")} className="space-y-3 rounded border p-3">
-    <div className="relative h-48 w-full overflow-hidden rounded bg-black">
-      {url?<Image unoptimized fill sizes="(max-width: 768px) 100vw, 800px" src={url} alt={t("Tagen bild","Captured image")} className="object-contain"/>:<video ref={video} autoPlay muted playsInline onLoadedData={()=>{if(stream.current)setReady(true)}} className="h-full w-full object-contain"/>}
+  return <section aria-label={t("Måltidskamera","Meal camera")} className="space-y-4 rounded-2xl border border-[#e6eadd] bg-[#fcfdfa] p-4 sm:p-5 shadow-sm">
+    <div className="relative aspect-video w-full overflow-hidden rounded-xl bg-[#17291f] shadow-inner">
+      {url?<Image unoptimized fill sizes="(max-width: 768px) 100vw, 800px" src={url} alt={t("Tagen bild","Captured image")} className="object-contain"/>:<video ref={video} autoPlay muted playsInline onLoadedData={()=>{if(stream.current)setReady(true)}} className="h-full w-full object-cover"/>}
     </div>
-    {error&&<p role="alert">{error}</p>}
-    <div className="flex flex-wrap gap-2">
-      {still?<><Button type="button" onClick={()=>void start()}>{t("Ta om","Retake")}</Button><Button type="button" onClick={()=>{stop();onUse(still);onClose()}}>{t("Använd bild","Use image")}</Button></>:<Button type="button" disabled={!ready} onClick={capture}>{t("Ta bild","Capture photo")}</Button>}
-      <Button type="button" variant="outline" onClick={()=>{stop();onClose()}}>{t("Avbryt kamera","Cancel camera")}</Button>
+    {error&&<p role="alert" className="text-sm text-amber-800 bg-amber-50 p-3 rounded-lg border border-amber-200">{error}</p>}
+    <div className="flex flex-wrap gap-3">
+      {still?<><Button type="button" variant="outline" className="h-11 rounded-xl border-[#d3dfd6] text-[#244d36] hover:bg-[#f0f5eb]" onClick={()=>void start()}>{t("Ta om","Retake")}</Button><Button type="button" className="h-11 rounded-xl bg-[#244d36] hover:bg-[#1a3827] text-white px-6" onClick={()=>{stop();onUse(still);onClose()}}>{t("Använd bild","Use image")}</Button></>:<Button type="button" className="h-11 rounded-xl bg-[#244d36] hover:bg-[#1a3827] text-white px-6" disabled={!ready} onClick={capture}>{t("Ta bild","Capture photo")}</Button>}
+      <Button type="button" variant="outline" className="h-11 rounded-xl border-transparent text-[#617064] hover:bg-[#f0f5eb] hover:text-[#244d36]" onClick={()=>{stop();onClose()}}>{t("Avbryt kamera","Cancel camera")}</Button>
     </div>
   </section>
 }

@@ -71,14 +71,14 @@ export function DailyNutrition({refreshKey = "",onPlanChanged}: {refreshKey?: st
       {photoToken&&<p>{t("Sparas som dagens intag när du bekräftar.","Saved to today’s intake when you confirm.")}</p>}
       <div className="grid gap-3 sm:grid-cols-2"><label>{t("Måltidstyp","Meal type")}<select className="w-full border rounded p-2" value={draft.mealType} onChange={e=>setDraft({...draft,mealType:e.target.value})}>{["breakfast","lunch","dinner","snack","other"].map((v,i)=><option key={v} value={v}>{(en?["Breakfast","Lunch","Dinner","Snack","Other"]:["Frukost","Lunch","Middag","Mellanmål","Annat"])[i]}</option>)}</select></label><label>{t("Datum och tid","Date and time")}<input disabled={!!photoToken} required type="datetime-local" className="w-full min-w-0 border rounded p-2" value={draft.eatenAt} onChange={e=>setDraft({...draft,eatenAt:e.target.value})}/></label></div>
       <fieldset className="space-y-2"><legend>{t("Foto (frivilligt)","Photo (optional)")}</legend>
-        <div className="flex flex-wrap gap-2">
-          <Button type="button" variant="outline" onClick={()=>setCameraOpen(true)}>{t("Ta foto","Take photo")}</Button>
-          <label className="relative flex min-h-12 cursor-pointer items-center justify-center rounded-xl border border-primary px-4 text-primary focus-within:ring-2">{t("Välj bild","Choose image")}<input aria-label={t("Välj bild","Choose image")} className="sr-only" type="file" accept="image/jpeg,image/png,image/webp" onClick={()=>setCameraOpen(false)} onChange={choosePhoto}/></label>
+        <div className="flex flex-wrap gap-3">
+          <Button type="button" variant="outline" className="h-11 rounded-xl px-6 border-[#d3dfd6] text-[#244d36] hover:bg-[#f0f5eb]" onClick={()=>setCameraOpen(true)}>{t("Ta foto","Take photo")}</Button>
+          <label className="relative flex min-h-11 cursor-pointer items-center justify-center rounded-xl border border-[#d3dfd6] bg-white px-6 font-medium text-[#244d36] shadow-sm transition-colors hover:bg-[#f0f5eb] focus-within:ring-2 focus-within:ring-[#244d36]">{t("Välj bild","Choose image")}<input aria-label={t("Välj bild","Choose image")} className="sr-only" type="file" accept="image/jpeg,image/png,image/webp" onClick={()=>setCameraOpen(false)} onChange={choosePhoto}/></label>
         </div>
       </fieldset>
       {cameraOpen&&<MealCamera en={en} onUse={choosePhotoFile} onClose={()=>setCameraOpen(false)}/>}
-      {photo&&<Button type="button" variant="outline" onClick={()=>{setPhoto(null);setPhotoFile(null);setEstimate(null);setPhotoToken(null)}}>{t("Ta bort bild","Remove image")}</Button>}
-      {photo && <div ref={preview} className="relative h-48 w-full"><Image unoptimized fill sizes="(max-width: 768px) 100vw, 800px" src={photo} alt={t("Din måltid, endast lokal förhandsvisning","Your meal, local preview only")} className="rounded object-contain"/></div>}
+      {photo&&<Button type="button" variant="outline" className="h-9 rounded-lg border-[#d3dfd6] text-[#617064]" onClick={()=>{setPhoto(null);setPhotoFile(null);setEstimate(null);setPhotoToken(null)}}>{t("Ta bort bild","Remove image")}</Button>}
+      {photo && <div ref={preview} className="relative aspect-video w-full overflow-hidden rounded-2xl bg-[#f7f9f5] border border-[#e6eadd] shadow-sm"><Image unoptimized fill sizes="(max-width: 768px) 100vw, 800px" src={photo} alt={t("Din måltid, endast lokal förhandsvisning","Your meal, local preview only")} className="object-cover"/></div>}
       <p className="text-sm">{t("När du väljer Analysera bild med AI skickas bilden till Googles externa AI-tjänst Gemini. Fotografera bara maten. Bilden förminskas och metadata tas bort. Livskraft sparar inte bilden. Ingen profil, hälsoinformation eller Coach-historik skickas.","When you choose Analyze image with AI, the image is sent to Google's external AI service Gemini. Photograph only the food. The image is resized and metadata removed. Livskraft does not store the image. No profile, health information or Coach history is sent.")}</p>
       <Button type="button" variant="outline" disabled={!photoAvailable||!photoFile||busy||cameraOpen} onClick={()=>void perform(async()=>{
         if(!photoFile)return
@@ -93,12 +93,32 @@ export function DailyNutrition({refreshKey = "",onPlanChanged}: {refreshKey?: st
         }
       })}>{busy?t("Arbetar…","Working…"):t("Analysera bild med AI","Analyze image with AI")}</Button>
       {!photoAvailable&&<p className="text-sm">{t("Foto-AI är inte tillgänglig. Du kan fylla i måltiden manuellt.","Photo AI is unavailable. You can enter the meal manually.")}</p>}
-      {estimate&&<div ref={result} className="border rounded p-3 space-y-2 scroll-mt-4" role="status">
-        <p className="font-medium">{t("AI-uppskattning – granska och korrigera","AI estimate – review and correct")}</p>
-        <p>{t("Uppskattning från foto. Portionsstorlek och näringsvärden kan avvika. Kontrollera uppgifterna innan du sparar.","Estimate from photo. Portion size and nutrition values may differ. Review the values before saving.")}</p>
-        <p>{t("AI:ns bedömda säkerhet","AI's estimated confidence")}: {estimate.confidence==="low"?t("Låg – kontrollera extra noga","Low – check carefully"):estimate.confidence==="medium"?t("Medel","Medium"):t("Hög – fortfarande en uppskattning","High – still an estimate")}</p>
-        <ul className="space-y-2">{estimate.items.map((item,index)=><li key={index} className="break-words">{item.name} · {item.estimatedGrams===null?t("Mängd okänd","Quantity unknown"):`~${item.estimatedGrams} g`} · {item.calories} kcal · {t("Protein","Protein")} {item.protein} g · {t("Kolhydrater","Carbs")} {item.carbs} g · {t("Fett","Fat")} {item.fat} g · {t("Fibrer","Fibre")} {item.fibre} g</li>)}</ul>
-        <p>{estimate.note}</p>
+      {estimate&&<div ref={result} className="mt-4 rounded-2xl border border-[#d3dfd6] bg-[#fcfdfa] p-5 sm:p-6 shadow-sm space-y-5 scroll-mt-4" role="status">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#e6eadd] pb-4">
+          <div>
+            <h3 className="text-lg font-semibold text-[#244d36]">{t("AI-uppskattning","AI estimate")}</h3>
+            <p className="text-sm text-[#465c4c]">{t("Granska och korrigera värdena","Review and correct the values")}</p>
+          </div>
+          <div className={`inline-flex items-center justify-center whitespace-nowrap rounded-full px-3 py-1 text-xs font-medium ${estimate.confidence==="low"?"bg-amber-100 text-amber-800":estimate.confidence==="medium"?"bg-blue-100 text-blue-800":"bg-green-100 text-green-800"}`}>
+            {t("Säkerhet:","Confidence:")} {estimate.confidence==="low"?t("Låg","Low"):estimate.confidence==="medium"?t("Medel","Medium"):t("Hög","High")}
+          </div>
+        </div>
+        <div className="grid gap-3">
+          {estimate.items.map((item,index)=><div key={index} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 rounded-xl border border-[#e6eadd] bg-white p-4 shadow-sm">
+            <div className="flex-1 min-w-0">
+              <p className="font-medium text-[#244d36] truncate">{item.name}</p>
+              <p className="text-sm text-[#617064]">{item.estimatedGrams===null?t("Mängd okänd","Quantity unknown"):`~${item.estimatedGrams} g`}</p>
+            </div>
+            <div className="flex flex-wrap sm:flex-nowrap items-center gap-3 text-sm text-[#465c4c]">
+              <span className="font-medium text-[#244d36] bg-[#f0f5eb] px-2 py-1 rounded-md">{item.calories} kcal</span>
+              <span className="opacity-75">{t("P","P")}:{item.protein}</span>
+              <span className="opacity-75">{t("K","C")}:{item.carbs}</span>
+              <span className="opacity-75">{t("F","F")}:{item.fat}</span>
+              <span className="opacity-75">{t("Fi","Fi")}:{item.fibre}</span>
+            </div>
+          </div>)}
+        </div>
+        {estimate.note && <p className="text-sm text-[#465c4c] bg-white p-4 rounded-xl border border-[#e6eadd]">{estimate.note}</p>}
       </div>}
       <details open={!!photoToken||undefined}><summary>{photoToken?t("Granska näringsvärden för hela måltiden","Review nutrition for the whole meal"):t("Frivilliga näringsvärden för hela portionen (uppskattade)","Optional nutrition for the entire portion (estimated)")}</summary><div className="grid grid-cols-2 gap-3 pt-3">{(["calories","protein","carbs","fat","fibre"] as (keyof Nutrition)[]).map((key,i)=><label key={key}>{(en?["Energy (kcal)","Protein (g)","Carbs (g)","Fat (g)","Fibre (g)"]:["Energi (kcal)","Protein (g)","Kolhydrater (g)","Fett (g)","Fibrer (g)"])[i]}<input className="w-full border rounded p-2" required={!!photoToken&&key!=="fibre"} type="number" min="0" max={key==="calories"?10000:1000} step="any" value={draft.nutrition[key]??""} onChange={e=>setDraft({...draft,nutrition:{...draft.nutrition,[key]:e.target.value===""?null:Number(e.target.value)}})}/></label>)}</div></details>
       <p className="text-sm">{t("Granska ingredienser, mängd och värden före sparande. Tomma näringsfält förblir okända.","Review components, portion and values before saving. Empty nutrition fields remain unknown.")}</p>
