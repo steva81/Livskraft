@@ -52,6 +52,7 @@ function UserCoachPage() {
   const [previousMessages,setPreviousMessages]=useState<Message[]>([])
   const [historyReady, setHistoryReady] = useState(false)
   const [historyError, setHistoryError] = useState("")
+  const [externalAIConsent,setExternalAIConsent] = useState(false)
   useEffect(() => {
     let active = true
     fetch("/api/coach", { cache: "no-store" }).then(async res => {
@@ -81,7 +82,7 @@ function UserCoachPage() {
       const res = await fetch("/api/coach", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text }),
+        body: JSON.stringify({ message: text, externalAIConsent }),
       })
       const data = (await res.json()) as { reply?: string; error?: string; saved?: boolean }
       if (!res.ok || data.saved === false) setHistoryError("Det senaste meddelandet kunde inte sparas i historiken.")
@@ -149,6 +150,10 @@ function UserCoachPage() {
         {mode === "advanced" && <p className="text-[#617064] mt-2">Kostregler: {overview.restrictions.map(displayValue).join(", ") || "Inga angivna"}. Mat du ogillar: {overview.dislikedFoods.join(", ") || "Inga angivna"}.</p>}
       </div>}
       <Card className="flex flex-col overflow-hidden border-0 bg-transparent shadow-none">
+        <label data-localize="off" className="text-sm space-x-2 p-2">
+          <input type="checkbox" checked={externalAIConsent} disabled={loading} onChange={e=>setExternalAIConsent(e.target.checked)} />
+          <span>{language==="en"?"Use external AI (Google Gemini). I agree to send my question, up to 12 recent messages from this login, and relevant checked Coach advice (for example a meal, workout or logged steps). Account identity and the full profile are not sent. Messages can contain personal information; avoid sensitive details. Uncheck to use local Coach. Consent resets when this page is reopened. If AI is unavailable or a question needs a safety response, local Coach replies.":"Använd extern AI (Google Gemini). Jag godkänner att min fråga, högst 12 senaste meddelanden från denna inloggning och relevanta kontrollerade Coach-råd skickas (till exempel måltid, pass eller registrerade steg). Kontoidentitet och hela profilen skickas inte. Meddelanden kan innehålla personuppgifter; undvik känsliga detaljer. Avmarkera för lokal Coach. Godkännandet återställs när sidan öppnas igen. Om AI inte är tillgänglig eller frågan behöver ett säkerhetssvar svarar lokal Coach."}</span>
+        </label>
         <CardContent ref={conversation} role="log" aria-label="Samtal med coachen" aria-live="polite" className="min-h-64 max-h-[50dvh] overflow-y-auto p-1 sm:p-2 space-y-5">
           {messages.map((msg) => (
             <div

@@ -23,14 +23,14 @@ export async function DELETE() {
 export async function POST(req: NextRequest) {
   const session = await getAuthSession()
   if (!session?.user?.id) return NextResponse.json({error:"Logga in först."},{status:401})
-  const body = await req.json().catch(()=>null) as {message?:unknown}|null
+  const body = await req.json().catch(()=>null) as {message?:unknown;externalAIConsent?:unknown}|null
   if (!body || typeof body.message!=="string" || !body.message.trim() || body.message.length>2000) {
     return NextResponse.json({error:"Skriv en fråga med högst 2 000 tecken."},{status:400})
   }
   const context = await getCoachContext()
   if (!context) return NextResponse.json({error:"Logga in först."},{status:401})
   const history = await readCoachHistory(session.user.id, new Date(session.loginAt ?? Date.now()))
-  const reply = await getCoachReply(body.message,context,history.slice(-12))
+  const reply = await getCoachReply(body.message,context,history.slice(-12),body.externalAIConsent === true)
   try {
     await saveCoachExchange(session.user.id, body.message.trim(), reply)
     return NextResponse.json({ reply, saved: true })
