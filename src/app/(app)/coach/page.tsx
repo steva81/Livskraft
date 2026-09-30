@@ -75,9 +75,9 @@ function UserCoachPage() {
     if (messages.length>1 && conversation.current) conversation.current.scrollTop = conversation.current.scrollHeight
   }, [messages, loading])
 
-  const sendMessage = async (text: string, preference = aiCoachEnabled) => {
-    if (!text.trim() || loading || savingPreference || !historyReady) return
-    if (preference === null) {setPendingMessage(text);return}
+  const sendMessage = async (text: string, preference = aiCoachEnabled, afterConsentChoice = false) => {
+    if (!text.trim() || loading || (!afterConsentChoice && savingPreference) || !historyReady) return
+    if (preference !== true && !afterConsentChoice) {setPendingMessage(text);return}
     setHistoryError("")
 
     const userMsg: Message = { id: Date.now(), role: "user", text }
@@ -120,7 +120,9 @@ function UserCoachPage() {
       const saved=await setAICoachPreference(enabled)
       setAICoachEnabled(saved);setPendingMessage(null)
       // The server reads the saved preference; no consent flag is sent with chat.
-      await sendMessage(text,saved)
+      // Continue only this explicitly reviewed message, including “Inte nu”.
+      // This is internal UI flow; the server still reads saved consent itself.
+      await sendMessage(text,saved,true)
     } catch {setHistoryError(language==="en"?"Could not save your AI Coach preference. Please try again.":"Kunde inte spara ditt AI Coach-val. Försök igen.")}
     finally {setSavingPreference(false)}
   }
@@ -157,7 +159,10 @@ function UserCoachPage() {
       </div>
 
       <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_220px]"><div className="min-w-0 space-y-5">
-      {aiCoachEnabled===false&&<Button variant="outline" disabled={loading||savingPreference||!historyReady} onClick={()=>setPendingMessage(input)}>{language==="en"?"Activate AI Coach":"Aktivera AI Coach"}</Button>}
+      {aiCoachEnabled===false&&pendingMessage===null&&<section data-localize="off" aria-label="AI Coach" className="rounded-xl border bg-white p-4 space-y-2">
+        <p className="text-sm">{language==="en"?"Activate AI Coach for conversational support with Google Gemini. Review privacy information before activation.":"Aktivera AI Coach för samtalsstöd med Google Gemini. Läs integritetsinformationen innan du aktiverar."}</p>
+        <Button disabled={loading||savingPreference||!historyReady} onClick={()=>setPendingMessage(input)}>{language==="en"?"Activate AI Coach":"Aktivera AI Coach"}</Button>
+      </section>}
       {overviewError && <p role="status" className="text-sm">Kunde inte läsa dagens översikt. Ladda om sidan för att försöka igen.</p>}
       {historyError && <p role="alert" className="text-sm text-red-700">{historyError}</p>}
       {overview&&!overview.ready&&<p data-localize="off" className="rounded-xl border p-4">{language==="en"?"Complete My Plan for personal recommendations. General guidance is available meanwhile.":"Komplettera Min plan för personliga rekommendationer. Under tiden finns allmänna råd."} <a className="underline" href="/my-plan">{language==="en"?"Complete My Plan":"Komplettera min plan"}</a></p>}
