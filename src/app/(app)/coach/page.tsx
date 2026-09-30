@@ -12,7 +12,6 @@ import { Send, Leaf } from "lucide-react"
 import { getCoachOverview } from "@/app/actions"
 import { displayValue } from "@/lib/display"
 import { useMode } from "@/lib/ModeContext"
-import { AICoachPrivacy, setAICoachPreference } from "@/components/ai-coach-preference"
 import { CoachText } from "@/components/coach-text"
 
 interface Message {
@@ -55,10 +54,6 @@ function UserCoachPage() {
   const [historyReady, setHistoryReady] = useState(false)
   const [historyError, setHistoryError] = useState("")
   const [aiCoachEnabled,setAICoachEnabled] = useState<boolean|null>(null)
-  const [pendingMessage,setPendingMessage] = useState<string|null>(null)
-  const [savingPreference,setSavingPreference] = useState(false)
-  const activationTitle = useRef<HTMLHeadingElement>(null)
-  useEffect(()=>{if(pendingMessage!==null)activationTitle.current?.focus()},[pendingMessage])
   useEffect(() => {
     let active = true
     fetch("/api/coach", { cache: "no-store" }).then(async res => {
@@ -75,9 +70,8 @@ function UserCoachPage() {
     if (messages.length>1 && conversation.current) conversation.current.scrollTop = conversation.current.scrollHeight
   }, [messages, loading])
 
-  const sendMessage = async (text: string, preference = aiCoachEnabled, afterConsentChoice = false) => {
-    if (!text.trim() || loading || (!afterConsentChoice && savingPreference) || !historyReady) return
-    if (preference !== true && !afterConsentChoice) {setPendingMessage(text);return}
+  const sendMessage = async (text: string) => {
+    if (!text.trim() || loading || !historyReady) return
     setHistoryError("")
 
     const userMsg: Message = { id: Date.now(), role: "user", text }
@@ -112,21 +106,6 @@ function UserCoachPage() {
     }
   }
 
-  const chooseAICoach = async (enabled:boolean) => {
-    if (savingPreference || pendingMessage===null) return
-    const text=pendingMessage
-    setSavingPreference(true);setHistoryError("")
-    try {
-      const saved=await setAICoachPreference(enabled)
-      setAICoachEnabled(saved);setPendingMessage(null)
-      // The server reads the saved preference; no consent flag is sent with chat.
-      // Continue only this explicitly reviewed message, including “Inte nu”.
-      // This is internal UI flow; the server still reads saved consent itself.
-      await sendMessage(text,saved,true)
-    } catch {setHistoryError(language==="en"?"Could not save your AI Coach preference. Please try again.":"Kunde inte spara ditt AI Coach-val. Försök igen.")}
-    finally {setSavingPreference(false)}
-  }
-
   const clearHistory = async () => {
     if (loading || !window.confirm(translate("Vill du radera din sparade Coach-historik?",language))) return
     setLoading(true)
@@ -159,10 +138,7 @@ function UserCoachPage() {
       </div>
 
       <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_220px]"><div className="min-w-0 space-y-5">
-      {aiCoachEnabled===false&&pendingMessage===null&&<section data-localize="off" aria-label="AI Coach" className="rounded-xl border bg-white p-4 space-y-2">
-        <p className="text-sm">{language==="en"?"Activate AI Coach for conversational support with Google Gemini. Review privacy information before activation.":"Aktivera AI Coach för samtalsstöd med Google Gemini. Läs integritetsinformationen innan du aktiverar."}</p>
-        <Button disabled={loading||savingPreference||!historyReady} onClick={()=>setPendingMessage(input)}>{language==="en"?"Activate AI Coach":"Aktivera AI Coach"}</Button>
-      </section>}
+      {historyReady&&aiCoachEnabled!==true&&<p data-localize="off" className="text-sm text-muted-foreground">{language==="en"?"AI Coach is off. You can activate it in Account settings.":"AI Coach är avstängd. Du kan aktivera den under Kontoinställningar."} <a className="underline" href="/account">{language==="en"?"Open Account settings":"Öppna Kontoinställningar"}</a></p>}
       {overviewError && <p role="status" className="text-sm">Kunde inte läsa dagens översikt. Ladda om sidan för att försöka igen.</p>}
       {historyError && <p role="alert" className="text-sm text-red-700">{historyError}</p>}
       {overview&&!overview.ready&&<p data-localize="off" className="rounded-xl border p-4">{language==="en"?"Complete My Plan for personal recommendations. General guidance is available meanwhile.":"Komplettera Min plan för personliga rekommendationer. Under tiden finns allmänna råd."} <a className="underline" href="/my-plan">{language==="en"?"Complete My Plan":"Komplettera min plan"}</a></p>}
@@ -176,12 +152,6 @@ function UserCoachPage() {
         {mode === "advanced" && <p className="text-[#617064] mt-2">Kostregler: {overview.restrictions.map(displayValue).join(", ") || "Inga angivna"}. Mat du ogillar: {overview.dislikedFoods.join(", ") || "Inga angivna"}.</p>}
       </div>}
       <Card className="flex flex-col overflow-hidden border-0 bg-transparent shadow-none">
-        {pendingMessage!==null&&<section data-localize="off" aria-labelledby="ai-coach-activation" className="rounded-xl border bg-white p-4 space-y-3">
-          <h2 ref={activationTitle} tabIndex={-1} id="ai-coach-activation" className="font-semibold">{language==="en"?"Activate AI Coach":"Aktivera AI Coach"}</h2>
-          <p className="text-sm">{language==="en"?"Livskraft uses Google Gemini for more conversational Coach responses. Your questions and limited recent Coach context may be sent to Google. Activation is saved to your account.":"Livskraft använder Google Gemini för mer samtalande Coach-svar. Dina frågor och begränsad aktuell Coach-kontext kan skickas till Google. Aktiveringen sparas på ditt konto."}</p>
-          <AICoachPrivacy />
-          <div className="flex gap-2"><Button disabled={savingPreference} onClick={()=>void chooseAICoach(true)}>{language==="en"?"Activate AI Coach":"Aktivera AI Coach"}</Button><Button variant="outline" disabled={savingPreference} onClick={()=>void chooseAICoach(false)}>{language==="en"?"Not now":"Inte nu"}</Button></div>
-        </section>}
         <CardContent ref={conversation} role="log" aria-label="Samtal med coachen" aria-live="polite" className="min-h-64 max-h-[50dvh] overflow-y-auto p-1 sm:p-2 space-y-5">
           {messages.map((msg) => (
             <div
@@ -222,9 +192,9 @@ function UserCoachPage() {
               onChange={(e) => setInput(e.target.value)}
               placeholder="Skriv din fråga…"
               className="min-w-0 flex-1 bg-white border border-input rounded-xl h-12 px-4 text-base focus:outline-none focus:ring-2 focus:ring-ring"
-              disabled={loading || savingPreference || pendingMessage!==null || !historyReady}
+              disabled={loading || !historyReady}
             />
-            <Button type="submit" size="icon" className="h-12 w-12" aria-label="Skicka fråga" disabled={loading || savingPreference || pendingMessage!==null || !historyReady || !input.trim()}>
+            <Button type="submit" size="icon" className="h-12 w-12" aria-label="Skicka fråga" disabled={loading || !historyReady || !input.trim()}>
               <Send className="h-4 w-4" />
             </Button>
           </form>
@@ -238,7 +208,7 @@ function UserCoachPage() {
             <button
               key={p}
               onClick={() => sendMessage(translate(p,language))}
-              disabled={loading || savingPreference || pendingMessage!==null || !historyReady}
+              disabled={loading || !historyReady}
               className="text-sm text-left bg-[#f0f5eb] border border-[#dfe7d8] text-[#244d36] rounded-xl px-4 py-3 hover:bg-[#e4eedb] transition disabled:opacity-50"
             >
               {p}
