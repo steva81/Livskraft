@@ -8,6 +8,7 @@ import { useMode } from "@/lib/ModeContext"
 import { useLanguage } from "@/lib/i18n/provider"
 import { type PhotoEstimate } from "@/lib/photo-meals"
 import { analyzeMealPhoto, photoTask } from "@/lib/photo-meal-client"
+import { browserUUID } from "@/lib/browser-uuid"
 import { Button } from "./ui/button"
 import { NutritionBalance } from "./nutrition-balance"
 
@@ -61,7 +62,8 @@ export function DailyNutrition({refreshKey = "",onPlanChanged}: {refreshKey?: st
         if(!photoFile)return
         try {
           const result=await photoTask(analyzeMealPhoto(photoFile,language,AbortSignal.timeout(30000)))
-          setEstimate(result);setPhotoToken(previous=>previous??crypto.randomUUID())
+          const token=photoToken??browserUUID()
+          setEstimate(result);setPhotoToken(previous=>previous??token)
           setDraft({...draft,id:undefined,name:result.items.map(item=>item.name).join(", ").slice(0,120),components:result.items.map(item=>`${item.name}${item.estimatedGrams===null?"":` · ~${item.estimatedGrams} g`}`).join("\n").slice(0,2000),portion:"",eatenAt:localTime(),nutrition:result.total})
         } catch(e) {
           const code=e instanceof Error&&e.message!=="timeout"?e.message:""
