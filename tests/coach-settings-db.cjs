@@ -16,6 +16,7 @@ const prisma=require('../src/lib/prisma').default,{submitOnboarding}=require('..
 const {defaultPreferences,readPreferences}=require('../src/lib/preferences')
 const {readAICoachPreference}=require('../src/lib/coach-preference')
 const route=require('../src/app/api/coach/preference/route')
+const coachRoute=require('../src/app/api/coach/route'),{NextRequest}=require('next/server')
 async function main(){
  const users=[]
  for(const [index,enabled] of [true,false,undefined].entries()){
@@ -34,7 +35,14 @@ async function main(){
   assert.equal(await readAICoachPreference(users[0].id),true,'Existing enabled user is untouched by another account toggle')
   assert.equal(await readAICoachPreference(users[2].id),null,'Existing missing preference stays unset/disabled')
  }
+ for(const user of [users[1],users[2]]){
+  identity=user.id
+  const before=await prisma.coachExchange.count({where:{userId:identity}})
+  const response=await coachRoute.POST(new NextRequest('https://livskraft.example/api/coach',{method:'POST',body:JSON.stringify({message:'vad ska jag träna idag?',aiCoachEnabled:true,externalAIConsent:true,userId:users[0].id})}))
+  assert.equal(response.status,403);assert.deepEqual(await response.json(),{error:'ai_coach_disabled'})
+  assert.equal(await prisma.coachExchange.count({where:{userId:identity}}),before,'Disabled/missing request creates no real persisted exchange')
+ }
  identity=null;assert.equal((await route.GET()).status,401)
- console.log('PASS real SQLite onboarding On/Not now persistence, Account On/Off persistence, existing true/missing preservation and user isolation')
+ console.log('PASS real SQLite onboarding/Account persistence, existing preferences/isolation, disabled/missing POST rejection and no persisted history')
 }
 main().catch(error=>{console.error(error);process.exitCode=1}).finally(()=>prisma.$disconnect())

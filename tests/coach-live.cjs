@@ -2,7 +2,7 @@ const assert = require('node:assert/strict')
 const Module = require('node:module'), path = require('node:path'), fs = require('node:fs')
 require('ts-node').register({ transpileOnly:true, compilerOptions:{module:'CommonJS',moduleResolution:'node',jsx:'react-jsx'} })
 const resolve = Module._resolveFilename, load = Module._load
-let identity = 'A', sent = [], saved = [], reads = []
+let identity = 'A', sent = [], saved = [], reads = [], contextReads = 0, replyCalls = 0
 const accounts={A:{preferences:JSON.stringify({language:'en',budget:'low'})},B:{preferences:null}}
 const preferenceWrites=[]
 const db={
@@ -27,7 +27,11 @@ Module._load = function(request,...args) {
   if(request==='server-only') return {}
   if(request==='@/lib/i18n/provider')return {useLanguage:()=>({language:'sv'})}
   if(request==='@/lib/auth') return {getAuthSession:async()=>identity?{user:{id:identity},loginAt:1000}:null}
-  if(request==='@/app/actions') return {getCoachContext:async()=>identity?context(`PRIVATE_NAME_${identity}`):null}
+  if(request==='@/app/actions') return {getCoachContext:async()=>{contextReads++;return identity?context(`PRIVATE_NAME_${identity}`):null}}
+  if(request==='@/lib/coach-service') {
+    const service=load.call(this,request,...args)
+    return {...service,getCoachReply:async(...parameters)=>{replyCalls++;return service.getCoachReply(...parameters)}}
+  }
   if(request==='@/lib/coach-history') return {
     readCoachHistory:async(id,since)=>{reads.push({id,since});return histories[id]},
     saveCoachExchange:async(id,question,reply)=>saved.push({id,question,reply}),
@@ -50,6 +54,14 @@ const preferenceRequest=(enabled,origin='https://livskraft.example')=>new Reques
 })
 const envelope = (reply='Take one manageable step today. You are in control.',finishReason='STOP') => ({candidates:[{finishReason,content:{parts:[{thought:true,text:'NOT_FOR_USER'},{text:JSON.stringify({reply})}]}}]})
 const mock = response => { global.fetch = async(url,options)=>{sent.push({url,options});return typeof response==='function'?response(options):Response.json(response)} }
+async function assertDisabled(req=request()) {
+  const before=[sent.length,saved.length,reads.length,contextReads,replyCalls]
+  const response=await route.POST(req)
+  assert.equal(response.status,403)
+  assert.deepEqual(await response.json(),{error:'ai_coach_disabled'},'No normal deterministic reply')
+  assert.equal(response.headers.get('cache-control'),'no-store')
+  assert.deepEqual([sent.length,saved.length,reads.length,contextReads,replyCalls],before,'Disabled request has no provider, context, reply, history read or exchange save')
+}
 async function main() {
   process.env.AI_COACH_LIVE_ENABLED='true';process.env.AI_API_KEY=key
   process.env.AI_API_URL='https://generativelanguage.googleapis.com/v1beta';process.env.AI_API_MODEL='gemini-test-model'
@@ -70,16 +82,16 @@ async function main() {
   assert.equal((await route.POST(request(true,''))).status,400)
   for(const consent of [true,false,undefined,'true']) {
     const req=consent===undefined?new NextRequest('https://livskraft.example/api/coach',{method:'POST',body:JSON.stringify({message:'Hello'})}):request(consent)
-    assert.equal((await route.POST(req)).status,200)
+    await assertDisabled(req)
   }
   assert.equal(sent.length,0,'Client consent flags cannot enable an undecided account')
   assert.equal((await preferenceRoute.PATCH(preferenceRequest('true'))).status,400)
   assert.equal((await preferenceRoute.PATCH(preferenceRequest(true,'https://evil.example'))).status,403)
   assert.equal(preferenceWrites.length,0)
-  // "Not now" persists local Coach; a later settings activation persists on the account.
+  // "Not now" disables chat; a later settings activation enables it.
   assert.equal((await preferenceRoute.PATCH(preferenceRequest(false))).status,200)
   assert.equal((await (await preferenceRoute.GET()).json()).aiCoachEnabled,false)
-  await route.POST(request(true));assert.equal(sent.length,0,'Disabled preference overrides forged client consent')
+  await assertDisabled(request(true));assert.equal(sent.length,0,'Disabled preference overrides forged client consent')
   assert.equal((await preferenceRoute.PATCH(preferenceRequest(true))).status,200)
   assert.equal((await (await preferenceRoute.GET()).json()).aiCoachEnabled,true)
   const stored=JSON.parse(accounts.A.preferences)
@@ -87,7 +99,8 @@ async function main() {
   assert.equal((await (await route.GET(new NextRequest('https://livskraft.example/api/coach'))).json()).aiCoachEnabled,true,'Reload sees saved activation')
   identity='B'
   assert.equal((await (await preferenceRoute.GET()).json()).aiCoachEnabled,null,'A activation cannot affect B')
-  await route.POST(request(true));assert.equal(sent.length,0)
+  await assertDisabled(request(true));assert.equal(sent.length,0)
+  await assertDisabled(new NextRequest('https://livskraft.example/api/coach',{method:'POST',body:JSON.stringify({message:'vad ska jag träna idag?',userId:'A',aiCoachEnabled:true,externalAIConsent:true})}))
   assert.equal((await preferenceRoute.PATCH(preferenceRequest(true))).status,200)
   saved=[];reads=[]
   for(const id of ['A','B']) {
@@ -108,9 +121,17 @@ async function main() {
   assert.deepEqual(saved.map(row=>row.id),['A','B']);assert.deepEqual(reads.map(row=>row.id),['A','B'])
   assert(reads.every(row=>+row.since===1000),'Only current-login history read')
   identity='A'
+  const safetyProviderCalls=sent.length,safetySaves=saved.length
+  for(const question of ['How much insulin should I take?','Fast to compensate for dinner']){
+    const response=await route.POST(request(true,question)),data=await response.json()
+    assert.equal(response.status,200);assert.equal(data.saved,true)
+    assert.equal(data.reply,await getCoachReply(question,context('PRIVATE_NAME_A'),histories.A))
+  }
+  assert.equal(sent.length,safetyProviderCalls,'Enabled API medical/unsafe requests retain deterministic safety routing')
+  assert.equal(saved.length,safetySaves+2,'Enabled safety exchanges still persist')
   const enabledCalls=sent.length
   await preferenceRoute.PATCH(preferenceRequest(false))
-  await route.POST(request(true));assert.equal(sent.length,enabledCalls,'Settings off keeps A local')
+  await assertDisabled(request(true));assert.equal(sent.length,enabledCalls,'Settings off blocks A chat')
   identity='B'
   assert.equal((await (await preferenceRoute.GET()).json()).aiCoachEnabled,true,'Settings off does not affect B')
   await route.POST(request(false));assert.equal(sent.length,enabledCalls+1,'B still automatically reaches Gemini')

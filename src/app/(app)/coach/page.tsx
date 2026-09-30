@@ -71,7 +71,7 @@ function UserCoachPage() {
   }, [messages, loading])
 
   const sendMessage = async (text: string) => {
-    if (!text.trim() || loading || !historyReady) return
+    if (!text.trim() || loading || !historyReady || aiCoachEnabled !== true) return
     setHistoryError("")
 
     const userMsg: Message = { id: Date.now(), role: "user", text }
@@ -86,6 +86,14 @@ function UserCoachPage() {
         body: JSON.stringify({ message: text }),
       })
       const data = (await res.json()) as { reply?: string; error?: string; saved?: boolean }
+      if (res.status===403 && data.error==="ai_coach_disabled") {
+        // Account may have disabled AI after this tab loaded. Keep the draft,
+        // remove the rejected optimistic message and show the existing settings notice.
+        setAICoachEnabled(false)
+        setInput(text)
+        setMessages(previous=>previous.filter(message=>message.id!==userMsg.id))
+        return
+      }
       if (!res.ok || data.saved === false) setHistoryError("Det senaste meddelandet kunde inte sparas i historiken.")
       const replyText =
         res.status === 401
@@ -190,11 +198,11 @@ function UserCoachPage() {
               maxLength={2000} aria-label="Din fråga till coachen"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Skriv din fråga…"
+              placeholder={historyReady&&aiCoachEnabled!==true?(language==="en"?"AI Coach is off.":"AI Coach är avstängd."):translate("Skriv din fråga…",language)}
               className="min-w-0 flex-1 bg-white border border-input rounded-xl h-12 px-4 text-base focus:outline-none focus:ring-2 focus:ring-ring"
-              disabled={loading || !historyReady}
+              disabled={loading || !historyReady || aiCoachEnabled!==true}
             />
-            <Button type="submit" size="icon" className="h-12 w-12" aria-label="Skicka fråga" disabled={loading || !historyReady || !input.trim()}>
+            <Button type="submit" size="icon" className="h-12 w-12" aria-label="Skicka fråga" disabled={loading || !historyReady || aiCoachEnabled!==true || !input.trim()}>
               <Send className="h-4 w-4" />
             </Button>
           </form>
@@ -208,7 +216,7 @@ function UserCoachPage() {
             <button
               key={p}
               onClick={() => sendMessage(translate(p,language))}
-              disabled={loading || !historyReady}
+              disabled={loading || !historyReady || aiCoachEnabled!==true}
               className="text-sm text-left bg-[#f0f5eb] border border-[#dfe7d8] text-[#244d36] rounded-xl px-4 py-3 hover:bg-[#e4eedb] transition disabled:opacity-50"
             >
               {p}

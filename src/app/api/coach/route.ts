@@ -28,10 +28,15 @@ export async function POST(req: NextRequest) {
   if (!body || typeof body.message!=="string" || !body.message.trim() || body.message.length>2000) {
     return NextResponse.json({error:"Skriv en fråga med högst 2 000 tecken."},{status:400})
   }
+  // Saved account consent is required for chat, including internal fallback replies.
+  // Reject before building context, reading conversation history or saving an exchange.
+  if (await readAICoachPreference(session.user.id) !== true) {
+    return NextResponse.json({error:"ai_coach_disabled"},{status:403,headers:{"Cache-Control":"no-store"}})
+  }
   const context = await getCoachContext()
   if (!context) return NextResponse.json({error:"Logga in först."},{status:401})
   const history = await readCoachHistory(session.user.id, new Date(session.loginAt ?? Date.now()))
-  const reply = await getCoachReply(body.message,context,history.slice(-12),await readAICoachPreference(session.user.id) === true)
+  const reply = await getCoachReply(body.message,context,history.slice(-12),true)
   try {
     await saveCoachExchange(session.user.id, body.message.trim(), reply)
     return NextResponse.json({ reply, saved: true })
