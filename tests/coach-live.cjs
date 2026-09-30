@@ -3,6 +3,17 @@ const Module = require('node:module'), path = require('node:path'), fs = require
 require('ts-node').register({ transpileOnly:true, compilerOptions:{module:'CommonJS',moduleResolution:'node'} })
 const resolve = Module._resolveFilename, load = Module._load
 let identity = 'A', sent = [], saved = [], reads = []
+const accounts={A:{preferences:JSON.stringify({language:'en',budget:'low'})},B:{preferences:null}}
+const preferenceWrites=[]
+const db={
+  user:{
+    findUnique:async({where,select})=>{assert.deepEqual(select,{preferences:true});return accounts[where.id]??null},
+    findUniqueOrThrow:async({where,select})=>{assert.deepEqual(select,{preferences:true});assert(accounts[where.id]);return accounts[where.id]},
+    update:async({where,data})=>{assert(accounts[where.id]);preferenceWrites.push(where.id);accounts[where.id]={...accounts[where.id],...data};return accounts[where.id]},
+  },
+  coachExchange:{deleteMany:async()=>({count:0})},
+  $transaction:async callback=>callback(db),
+}
 const context = name => ({ userName:name, language:'en', restrictions:[], dislikedFoods:[], stepGoal:7000,
   todayMeals:['UNRELATED_MEAL'], todayWorkout:null, completedWorkoutsThisWeek:0, health:'type1',
   budget:'PRIVATE_BUDGET', workSchedule:'PRIVATE_SCHEDULE', email:'PRIVATE_EMAIL', password:'PRIVATE_PASSWORD',
@@ -20,10 +31,12 @@ Module._load = function(request,...args) {
     readCoachHistory:async(id,since)=>{reads.push({id,since});return histories[id]},
     saveCoachExchange:async(id,question,reply)=>saved.push({id,question,reply}),
   }
-  if(request==='@/lib/prisma') return {default:{coachExchange:{deleteMany:async()=>({count:0})}}}
+  if(request==='@/lib/prisma'||request==='./prisma'&&args[0]?.filename.endsWith('coach-preference.ts')) return {__esModule:true,default:db}
   return load.call(this,request,...args)
 }
 const route = require('../src/app/api/coach/route')
+const preferenceRoute=require('../src/app/api/coach/preference/route')
+const {readPreferences}=require('../src/lib/preferences')
 const {getCoachReply} = require('../src/lib/coach-service')
 const {generateCoachReply} = require('../src/lib/coach-provider')
 const {NextRequest} = require('next/server')
@@ -31,28 +44,54 @@ const key = 'TEST_SERVER_ONLY_KEY'
 const request = (consent=true,message='Help me manage a busy day') => new NextRequest('https://livskraft.example/api/coach',{
   method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({message,externalAIConsent:consent}),
 })
+const preferenceRequest=(enabled,origin='https://livskraft.example')=>new Request('https://livskraft.example/api/coach/preference',{
+  method:'PATCH',headers:{origin,'content-type':'application/json'},body:JSON.stringify({aiCoachEnabled:enabled,userId:'B'}),
+})
 const envelope = (reply='Take one manageable step today. You are in control.',finishReason='STOP') => ({candidates:[{finishReason,content:{parts:[{thought:true,text:'NOT_FOR_USER'},{text:JSON.stringify({reply})}]}}]})
 const mock = response => { global.fetch = async(url,options)=>{sent.push({url,options});return typeof response==='function'?response(options):Response.json(response)} }
 async function main() {
   process.env.AI_COACH_LIVE_ENABLED='true';process.env.AI_API_KEY=key
   process.env.AI_API_URL='https://generativelanguage.googleapis.com/v1beta';process.env.AI_API_MODEL='gemini-test-model'
+  process.env.NEXTAUTH_URL='https://livskraft.example'
   mock(envelope())
   identity=null
   assert.equal((await route.POST(request())).status,401)
   assert.equal((await route.GET(new NextRequest('https://livskraft.example/api/coach'))).status,401)
   assert.equal((await route.DELETE()).status,401)
+  assert.equal((await preferenceRoute.GET()).status,401)
+  assert.equal((await preferenceRoute.PATCH(preferenceRequest(true))).status,401)
+  assert.equal(preferenceWrites.length,0)
   assert.equal(sent.length,0);assert.equal(reads.length,0)
   identity='A'
+  assert.equal((await (await preferenceRoute.GET()).json()).aiCoachEnabled,null,'Existing user is undecided')
+  assert.equal((await (await route.GET(new NextRequest('https://livskraft.example/api/coach'))).json()).aiCoachEnabled,null)
+  for(const raw of [null,'{}','{"aiCoachEnabled":"true"}','not JSON']) assert.equal(readPreferences(raw).aiCoachEnabled,undefined)
   assert.equal((await route.POST(request(true,''))).status,400)
-  for(const consent of [false,undefined,'true']) {
+  for(const consent of [true,false,undefined,'true']) {
     const req=consent===undefined?new NextRequest('https://livskraft.example/api/coach',{method:'POST',body:JSON.stringify({message:'Hello'})}):request(consent)
     assert.equal((await route.POST(req)).status,200)
   }
-  assert.equal(sent.length,0,'Consent must be explicit boolean true')
+  assert.equal(sent.length,0,'Client consent flags cannot enable an undecided account')
+  assert.equal((await preferenceRoute.PATCH(preferenceRequest('true'))).status,400)
+  assert.equal((await preferenceRoute.PATCH(preferenceRequest(true,'https://evil.example'))).status,403)
+  assert.equal(preferenceWrites.length,0)
+  // "Not now" persists local Coach; a later settings activation persists on the account.
+  assert.equal((await preferenceRoute.PATCH(preferenceRequest(false))).status,200)
+  assert.equal((await (await preferenceRoute.GET()).json()).aiCoachEnabled,false)
+  await route.POST(request(true));assert.equal(sent.length,0,'Disabled preference overrides forged client consent')
+  assert.equal((await preferenceRoute.PATCH(preferenceRequest(true))).status,200)
+  assert.equal((await (await preferenceRoute.GET()).json()).aiCoachEnabled,true)
+  const stored=JSON.parse(accounts.A.preferences)
+  assert.equal(stored.language,'en');assert.equal(stored.budget,'low')
+  assert.equal((await (await route.GET(new NextRequest('https://livskraft.example/api/coach'))).json()).aiCoachEnabled,true,'Reload sees saved activation')
+  identity='B'
+  assert.equal((await (await preferenceRoute.GET()).json()).aiCoachEnabled,null,'A activation cannot affect B')
+  await route.POST(request(true));assert.equal(sent.length,0)
+  assert.equal((await preferenceRoute.PATCH(preferenceRequest(true))).status,200)
   saved=[];reads=[]
   for(const id of ['A','B']) {
     identity=id
-    const res=await route.POST(request())
+    const res=await route.POST(request(false))
     assert.equal(res.status,200)
     const data=await res.json()
     assert.equal(data.reply,'Take one manageable step today. You are in control.')
@@ -67,6 +106,17 @@ async function main() {
   }
   assert.deepEqual(saved.map(row=>row.id),['A','B']);assert.deepEqual(reads.map(row=>row.id),['A','B'])
   assert(reads.every(row=>+row.since===1000),'Only current-login history read')
+  identity='A'
+  const enabledCalls=sent.length
+  await preferenceRoute.PATCH(preferenceRequest(false))
+  await route.POST(request(true));assert.equal(sent.length,enabledCalls,'Settings off keeps A local')
+  identity='B'
+  assert.equal((await (await preferenceRoute.GET()).json()).aiCoachEnabled,true,'Settings off does not affect B')
+  await route.POST(request(false));assert.equal(sent.length,enabledCalls+1,'B still automatically reaches Gemini')
+  identity='A'
+  await preferenceRoute.PATCH(preferenceRequest(true))
+  await route.POST(new NextRequest('https://livskraft.example/api/coach',{method:'POST',body:JSON.stringify({message:'Help me today'})}))
+  assert.equal(sent.length,enabledCalls+2,'Settings on enables Gemini without a client flag')
   const longHistory=Array.from({length:30},(_,i)=>({role:'user',text:`history-${i} `+'x'.repeat(1100)}))
   await getCoachReply('Help me today',context('PRIVATE_NAME'),longHistory,true)
   const bounded=JSON.parse(JSON.parse(sent.at(-1).options.body).contents[0].parts[0].text).history
@@ -161,8 +211,12 @@ async function main() {
   assert.equal(await getCoachReply('Help me today',context('PRIVATE_NAME'),[],true),local)
   assert.equal(sent.length,afterSafety)
   const ui=fs.readFileSync('src/app/(app)/coach/page.tsx','utf8')
-  assert(ui.includes('useState(false)'));assert(ui.includes('JSON.stringify({ message: text, externalAIConsent })'))
+  assert(ui.includes('Aktivera AI Coach'));assert(ui.includes('Inte nu'))
+  assert(ui.includes('JSON.stringify({ message: text })'));assert(!ui.includes('externalAIConsent'))
+  assert(!ui.includes('type="checkbox"'));assert(ui.includes('setAICoachPreference(enabled)'))
+  assert(fs.readFileSync('src/app/(app)/account/page.tsx','utf8').includes('AICoachSettings'))
+  assert(fs.readFileSync('src/components/ai-coach-preference.tsx','utf8').includes('role="switch"'))
   assert(!ui.includes('AI_API_KEY'));assert(!ui.includes('coach-provider'))
-  console.log('PASS authenticated Gemini path, consent, auth, user/session isolation, bounded history, minimized payload, secrets, failures/timeout/invalid output, safety and local fallback')
+  console.log('PASS saved consent, undecided/disabled accounts, activation persistence, settings toggles, auth/origin, user isolation, Gemini path, bounded history, minimized payload, secrets, failures/timeout/invalid output, safety and local fallback')
 }
 main().catch(error=>{console.error(error);process.exitCode=1})

@@ -12,6 +12,7 @@ import { Send, Leaf } from "lucide-react"
 import { getCoachOverview } from "@/app/actions"
 import { displayValue } from "@/lib/display"
 import { useMode } from "@/lib/ModeContext"
+import { AICoachPrivacy, setAICoachPreference } from "@/components/ai-coach-preference"
 
 interface Message {
   id: string | number
@@ -52,13 +53,17 @@ function UserCoachPage() {
   const [previousMessages,setPreviousMessages]=useState<Message[]>([])
   const [historyReady, setHistoryReady] = useState(false)
   const [historyError, setHistoryError] = useState("")
-  const [externalAIConsent,setExternalAIConsent] = useState(false)
+  const [aiCoachEnabled,setAICoachEnabled] = useState<boolean|null>(null)
+  const [pendingMessage,setPendingMessage] = useState<string|null>(null)
+  const [savingPreference,setSavingPreference] = useState(false)
+  const activationTitle = useRef<HTMLHeadingElement>(null)
+  useEffect(()=>{if(pendingMessage!==null)activationTitle.current?.focus()},[pendingMessage])
   useEffect(() => {
     let active = true
     fetch("/api/coach", { cache: "no-store" }).then(async res => {
       if (!res.ok) throw new Error("History unavailable")
-      const data = await res.json() as { messages: Message[]; hasHistory:boolean }
-      if (active) { setMessages(previous => [previous[0], ...data.messages]); setHistoryReady(true); setHasHistory(data.hasHistory) }
+      const data = await res.json() as { messages: Message[]; hasHistory:boolean; aiCoachEnabled:boolean|null }
+      if (active) { setMessages(previous => [previous[0], ...data.messages]); setAICoachEnabled(typeof data.aiCoachEnabled==="boolean"?data.aiCoachEnabled:null); setHistoryReady(true); setHasHistory(data.hasHistory) }
     }).catch(() => { if (active) setHistoryError("Kunde inte läsa historiken. Ladda om sidan för att försöka igen.") })
     return () => { active = false }
   }, [])
@@ -69,8 +74,9 @@ function UserCoachPage() {
     if (messages.length>1 && conversation.current) conversation.current.scrollTop = conversation.current.scrollHeight
   }, [messages, loading])
 
-  const sendMessage = async (text: string) => {
-    if (!text.trim() || loading || !historyReady) return
+  const sendMessage = async (text: string, preference = aiCoachEnabled) => {
+    if (!text.trim() || loading || savingPreference || !historyReady) return
+    if (preference === null) {setPendingMessage(text);return}
     setHistoryError("")
 
     const userMsg: Message = { id: Date.now(), role: "user", text }
@@ -82,7 +88,7 @@ function UserCoachPage() {
       const res = await fetch("/api/coach", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text, externalAIConsent }),
+        body: JSON.stringify({ message: text }),
       })
       const data = (await res.json()) as { reply?: string; error?: string; saved?: boolean }
       if (!res.ok || data.saved === false) setHistoryError("Det senaste meddelandet kunde inte sparas i historiken.")
@@ -103,6 +109,19 @@ function UserCoachPage() {
     } finally {
       setLoading(false)
     }
+  }
+
+  const chooseAICoach = async (enabled:boolean) => {
+    if (savingPreference || pendingMessage===null) return
+    const text=pendingMessage
+    setSavingPreference(true);setHistoryError("")
+    try {
+      const saved=await setAICoachPreference(enabled)
+      setAICoachEnabled(saved);setPendingMessage(null)
+      // The server reads the saved preference; no consent flag is sent with chat.
+      await sendMessage(text,saved)
+    } catch {setHistoryError(language==="en"?"Could not save your AI Coach preference. Please try again.":"Kunde inte spara ditt AI Coach-val. Försök igen.")}
+    finally {setSavingPreference(false)}
   }
 
   const clearHistory = async () => {
@@ -150,10 +169,12 @@ function UserCoachPage() {
         {mode === "advanced" && <p className="text-[#617064] mt-2">Kostregler: {overview.restrictions.map(displayValue).join(", ") || "Inga angivna"}. Mat du ogillar: {overview.dislikedFoods.join(", ") || "Inga angivna"}.</p>}
       </div>}
       <Card className="flex flex-col overflow-hidden border-0 bg-transparent shadow-none">
-        <label data-localize="off" className="text-sm space-x-2 p-2">
-          <input type="checkbox" checked={externalAIConsent} disabled={loading} onChange={e=>setExternalAIConsent(e.target.checked)} />
-          <span>{language==="en"?"Use external AI (Google Gemini). I agree to send my question, up to 12 recent messages from this login, and relevant checked Coach advice (for example a meal, workout or logged steps). Account identity and the full profile are not sent. Messages can contain personal information; avoid sensitive details. Uncheck to use local Coach. Consent resets when this page is reopened. If AI is unavailable or a question needs a safety response, local Coach replies.":"Använd extern AI (Google Gemini). Jag godkänner att min fråga, högst 12 senaste meddelanden från denna inloggning och relevanta kontrollerade Coach-råd skickas (till exempel måltid, pass eller registrerade steg). Kontoidentitet och hela profilen skickas inte. Meddelanden kan innehålla personuppgifter; undvik känsliga detaljer. Avmarkera för lokal Coach. Godkännandet återställs när sidan öppnas igen. Om AI inte är tillgänglig eller frågan behöver ett säkerhetssvar svarar lokal Coach."}</span>
-        </label>
+        {pendingMessage!==null&&<section data-localize="off" aria-labelledby="ai-coach-activation" className="rounded-xl border bg-white p-4 space-y-3">
+          <h2 ref={activationTitle} tabIndex={-1} id="ai-coach-activation" className="font-semibold">{language==="en"?"Activate AI Coach":"Aktivera AI Coach"}</h2>
+          <p className="text-sm">{language==="en"?"Livskraft uses Google Gemini for more conversational Coach responses. Your questions and limited recent Coach context may be sent to Google. Your choice is saved to your account and can be changed in Account.":"Livskraft använder Google Gemini för mer samtalande Coach-svar. Dina frågor och begränsad aktuell Coach-kontext kan skickas till Google. Valet sparas på ditt konto och kan ändras under Konto."}</p>
+          <AICoachPrivacy />
+          <div className="flex gap-2"><Button disabled={savingPreference} onClick={()=>void chooseAICoach(true)}>{language==="en"?"Activate AI Coach":"Aktivera AI Coach"}</Button><Button variant="outline" disabled={savingPreference} onClick={()=>void chooseAICoach(false)}>{language==="en"?"Not now":"Inte nu"}</Button></div>
+        </section>}
         <CardContent ref={conversation} role="log" aria-label="Samtal med coachen" aria-live="polite" className="min-h-64 max-h-[50dvh] overflow-y-auto p-1 sm:p-2 space-y-5">
           {messages.map((msg) => (
             <div
@@ -194,9 +215,9 @@ function UserCoachPage() {
               onChange={(e) => setInput(e.target.value)}
               placeholder="Skriv din fråga…"
               className="min-w-0 flex-1 bg-white border border-input rounded-xl h-12 px-4 text-base focus:outline-none focus:ring-2 focus:ring-ring"
-              disabled={loading || !historyReady}
+              disabled={loading || savingPreference || pendingMessage!==null || !historyReady}
             />
-            <Button type="submit" size="icon" className="h-12 w-12" aria-label="Skicka fråga" disabled={loading || !historyReady || !input.trim()}>
+            <Button type="submit" size="icon" className="h-12 w-12" aria-label="Skicka fråga" disabled={loading || savingPreference || pendingMessage!==null || !historyReady || !input.trim()}>
               <Send className="h-4 w-4" />
             </Button>
           </form>
@@ -210,7 +231,7 @@ function UserCoachPage() {
             <button
               key={p}
               onClick={() => sendMessage(translate(p,language))}
-              disabled={loading || !historyReady}
+              disabled={loading || savingPreference || pendingMessage!==null || !historyReady}
               className="text-sm text-left bg-[#f0f5eb] border border-[#dfe7d8] text-[#244d36] rounded-xl px-4 py-3 hover:bg-[#e4eedb] transition disabled:opacity-50"
             >
               {p}

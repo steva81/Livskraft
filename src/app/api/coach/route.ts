@@ -4,13 +4,14 @@ import { getCoachReply } from "@/lib/coach-service"
 import { getCoachContext } from "@/app/actions"
 import { readCoachHistory, saveCoachExchange } from "@/lib/coach-history"
 import prisma from "@/lib/prisma"
+import { readAICoachPreference } from "@/lib/coach-preference"
 
 export async function GET(req: NextRequest) {
   const session = await getAuthSession()
   if (!session?.user?.id) return NextResponse.json({error:"Logga in först."},{status:401})
   const all = await readCoachHistory(session.user.id)
   const current = await readCoachHistory(session.user.id, new Date(session.loginAt ?? Date.now()))
-  return NextResponse.json({ messages: req.nextUrl.searchParams.get("history") === "all" ? all : current, hasHistory: all.length > 0 }, { headers: { "Cache-Control": "no-store" } })
+  return NextResponse.json({ messages: req.nextUrl.searchParams.get("history") === "all" ? all : current, hasHistory: all.length > 0, aiCoachEnabled:await readAICoachPreference(session.user.id) }, { headers: { "Cache-Control": "no-store" } })
 }
 
 export async function DELETE() {
@@ -23,14 +24,14 @@ export async function DELETE() {
 export async function POST(req: NextRequest) {
   const session = await getAuthSession()
   if (!session?.user?.id) return NextResponse.json({error:"Logga in först."},{status:401})
-  const body = await req.json().catch(()=>null) as {message?:unknown;externalAIConsent?:unknown}|null
+  const body = await req.json().catch(()=>null) as {message?:unknown}|null
   if (!body || typeof body.message!=="string" || !body.message.trim() || body.message.length>2000) {
     return NextResponse.json({error:"Skriv en fråga med högst 2 000 tecken."},{status:400})
   }
   const context = await getCoachContext()
   if (!context) return NextResponse.json({error:"Logga in först."},{status:401})
   const history = await readCoachHistory(session.user.id, new Date(session.loginAt ?? Date.now()))
-  const reply = await getCoachReply(body.message,context,history.slice(-12),body.externalAIConsent === true)
+  const reply = await getCoachReply(body.message,context,history.slice(-12),await readAICoachPreference(session.user.id) === true)
   try {
     await saveCoachExchange(session.user.id, body.message.trim(), reply)
     return NextResponse.json({ reply, saved: true })

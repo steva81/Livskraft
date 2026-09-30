@@ -6,6 +6,7 @@ export type MeasurementKey = keyof typeof measurementLabels
 export const healthOptions = { none: "Ingen särskild hälsoanpassning", prediabetes: "Prediabetes", type1: "Typ 1-diabetes", type2: "Typ 2-diabetes", undisclosed: "Vill inte ange / Annat" }
 export type Preferences = BodyData & {
   planningConfirmed?: boolean; homeVisited?: boolean
+  aiCoachEnabled?: boolean
   primaryGoal?: "lose" | "maintain" | "retain-muscle" | "build-muscle"
   dailySteps: number; cookingMinutes: number; workoutMinutes: number; trainingDays: number
   budget: string; likedFoods: string; equipment: string; workSchedule: string
@@ -22,7 +23,7 @@ export function validSlots(value: unknown): value is MealSlot[] {
   return Array.isArray(value) && value.length <= 4 && new Set(value).size === value.length && value.every(v => mealSlots.includes(v))
 }
 export function validPreferences(p: Preferences): boolean {
-  return !!p && [p.planningConfirmed,p.homeVisited].every(v=>v===undefined||typeof v==="boolean") && (p.primaryGoal === undefined || ["lose", "maintain", "retain-muscle", "build-muscle"].includes(p.primaryGoal)) &&
+  return !!p && [p.planningConfirmed,p.homeVisited,p.aiCoachEnabled].every(v=>v===undefined||typeof v==="boolean") && (p.primaryGoal === undefined || ["lose", "maintain", "retain-muscle", "build-muscle"].includes(p.primaryGoal)) &&
     validBodyData(p) && ["low", "normal", "high"].includes(p.budget) && ["dagtid", "kvall", "natt", "skift", "oregelbundet"].includes(p.workSchedule) &&
     typeof p.health === "string" && Object.hasOwn(healthOptions, p.health) && ["sv", "en"].includes(p.language) && validSlots(p.mealSlots) &&
     Array.isArray(p.trackedMeasurements) && p.trackedMeasurements.length <= 6 && p.trackedMeasurements.every(k => typeof k === "string" && Object.hasOwn(measurementLabels, k)) &&
@@ -35,7 +36,7 @@ export function readPreferences(raw: string | null): Preferences {
     const parsed = JSON.parse(raw ?? "{}")
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return defaults
     // Apply the existing rules independently. Missing/invalid optional choices stay unset.
-    const keys = [...Object.keys(defaultPreferences), "planningConfirmed", "homeVisited", "primaryGoal", "birthYear", "sexForEnergy"]
+    const keys = [...Object.keys(defaultPreferences), "planningConfirmed", "homeVisited", "aiCoachEnabled", "primaryGoal", "birthYear", "sexForEnergy"]
     const validFields = Object.fromEntries(keys.flatMap(key =>
       Object.hasOwn(parsed, key) && validPreferences({ ...defaults, [key]: parsed[key] }) ? [[key, parsed[key]]] : []
     ))
