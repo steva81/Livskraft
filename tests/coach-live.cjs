@@ -1,6 +1,6 @@
 const assert = require('node:assert/strict')
 const Module = require('node:module'), path = require('node:path'), fs = require('node:fs')
-require('ts-node').register({ transpileOnly:true, compilerOptions:{module:'CommonJS',moduleResolution:'node'} })
+require('ts-node').register({ transpileOnly:true, compilerOptions:{module:'CommonJS',moduleResolution:'node',jsx:'react-jsx'} })
 const resolve = Module._resolveFilename, load = Module._load
 let identity = 'A', sent = [], saved = [], reads = []
 const accounts={A:{preferences:JSON.stringify({language:'en',budget:'low'})},B:{preferences:null}}
@@ -25,6 +25,7 @@ const histories = {
 Module._resolveFilename = function(request,...args) { return resolve.call(this,request.startsWith('@/')?path.resolve('src',request.slice(2)):request,...args) }
 Module._load = function(request,...args) {
   if(request==='server-only') return {}
+  if(request==='@/lib/i18n/provider')return {useLanguage:()=>({language:'sv'})}
   if(request==='@/lib/auth') return {getAuthSession:async()=>identity?{user:{id:identity},loginAt:1000}:null}
   if(request==='@/app/actions') return {getCoachContext:async()=>identity?context(`PRIVATE_NAME_${identity}`):null}
   if(request==='@/lib/coach-history') return {
@@ -99,7 +100,7 @@ async function main() {
     const {url,options}=sent.at(-1),body=JSON.parse(options.body), payload=JSON.parse(body.contents[0].parts[0].text)
     assert.equal(url,'https://generativelanguage.googleapis.com/v1beta/models/gemini-test-model:generateContent')
     assert.equal(options.headers['x-goog-api-key'],key);assert(!url.includes(key));assert.equal(options.redirect,'error')
-    assert.deepEqual(Object.keys(payload).sort(),['checkedAdvice','history','language','message'])
+    assert.deepEqual(Object.keys(payload).sort(),['history','language','message'])
     assert.deepEqual(payload.history,histories[id]);assert(!options.body.includes(`${id==='A'?'B':'A'}_PRIVATE_CHAT`))
     for(const value of [key,`PRIVATE_NAME_${id}`,'PRIVATE_EMAIL','PRIVATE_PASSWORD','PRIVATE_BUDGET','PRIVATE_SCHEDULE','UNRELATED_MEAL','type1']) assert(!options.body.includes(value),value)
     assert(body.systemInstruction.parts[0].text.includes('Life Happens'))
@@ -119,19 +120,32 @@ async function main() {
   assert.equal(sent.length,enabledCalls+2,'Settings on enables Gemini without a client flag')
   const activity={today:'2026-09-30',weekStartsOn:'2026-09-28',from:'2026-09-24',workouts:[{date:'2026-09-29',title:'A Chest',type:'gym',exercises:['Bench press']}],steps:[{date:'2026-09-29',steps:null}],workoutsTruncated:false,todayPlan:{status:'rest'}}
   let continuity=[]
-  for(const message of ['vad ska jag träna idag','jag körde bröst igår','och imorgon då?','vad tycker du istället?','jag hann inte göra det','kan jag köra ben istället?']) {
+  for(const message of ['vad ska jag träna idag','jag körde bröst igår','kanske rumpa och band','30 minuter bara','kan jag byta ut bandet mot crosstrainer?','och imorgon då?','vad tycker du istället?','jag hann inte göra det','kan jag köra ben istället?','jag är trött idag']) {
     const calls=sent.length
     await getCoachReply(message,{...context('PRIVATE_NAME'),recentActivity:activity},continuity,true)
     assert.equal(sent.length,calls+1)
     const body=JSON.parse(sent.at(-1).options.body),payload=JSON.parse(body.contents[0].parts[0].text)
-    assert.deepEqual(payload.history,continuity)
+    assert.deepEqual(payload.history,continuity.slice(-12))
     assert.deepEqual(payload.recentActivity,activity)
+    assert.equal(payload.localReference,undefined,'Training conversation must not carry a deterministic one-turn script')
+    assert.equal(payload.message,message)
     assert(body.systemInstruction.parts[0].text.includes('Never claim a chat statement was logged'))
+    assert(body.systemInstruction.parts[0].text.includes('never a rigid answer boundary'))
+    assert(body.systemInstruction.parts[0].text.includes('automatic Apple Health, Apple Watch and Android/watch health synchronization does NOT exist'))
+    assert(body.systemInstruction.parts[0].text.includes('suggest glutes, legs, treadmill'))
+    assert(body.systemInstruction.parts[0].text.includes('primary reasoning and dialogue layer'))
+    assert(body.systemInstruction.parts[0].text.includes('30 minuter bara'))
     continuity=[...continuity,{role:'user',text:message},{role:'coach',text:'Take one manageable step today. You are in control.'}]
   }
   await getCoachReply('Vad tränade jag igår?',{...context('PRIVATE_NAME'),recentActivity:activity},[],true)
   const activityPayload=JSON.parse(JSON.parse(sent.at(-1).options.body).contents[0].parts[0].text)
-  assert(activityPayload.checkedAdvice.includes('A Chest'))
+  assert.equal(activityPayload.localReference,undefined)
+  assert.equal(activityPayload.recentActivity.workouts[0].title,'A Chest')
+  const chatOnlyHistory=[{role:'user',text:'jag körde bröst igår'}]
+  await getCoachReply('30 minuter bara',{...context('PRIVATE_NAME'),recentActivity:{...activity,workouts:[]}},chatOnlyHistory,true)
+  const chatPayload=JSON.parse(JSON.parse(sent.at(-1).options.body).contents[0].parts[0].text)
+  assert.deepEqual(chatPayload.history,chatOnlyHistory)
+  assert.deepEqual(chatPayload.recentActivity.workouts,[],'Chat claims do not turn into logged facts')
   assert.equal(await getCoachReply('Vad tränade jag igår?',{...context('PRIVATE_NAME'),language:'sv',recentActivity:activity}), 'Registrerade avklarade pass:\n2026-09-29: A Chest (Bench press)')
   const longHistory=Array.from({length:30},(_,i)=>({role:'user',text:`history-${i} `+'x'.repeat(1100)}))
   await getCoachReply('Help me today',context('PRIVATE_NAME'),longHistory,true)
@@ -147,6 +161,8 @@ async function main() {
     ()=>Response.json(envelope('Take 8 units of insulin.')),
     ()=>Response.json(envelope('Skip a meal to earn your food.')),
     ()=>Response.json(envelope('You are lazy.')),
+    ()=>Response.json(envelope('Connect Apple Health to sync your phone steps in Livskraft.')),
+    ()=>Response.json(envelope('Klicka på synk i inställningar för Apple Watch.')),
     ()=>Response.json(envelope(`secret ${key}`)),
     ()=>new Response('not JSON'),()=>new Response('x'.repeat(65537)),
   ]) {
@@ -170,6 +186,9 @@ async function main() {
     assert.equal(await getCoachReply('Help me today',context('PRIVATE_NAME'),[],true),local)
     assert.equal(duration,25000)
   } finally {AbortSignal.timeout=timeout}
+  mock(envelope())
+  mock(envelope('Automatic Apple Health sync is not available in this beta. You can enter steps manually.'))
+  assert.equal(await generateCoachReply('Does watch sync work?','en',[],'Optional reference'),'Automatic Apple Health sync is not available in this beta. You can enter steps manually.')
   mock(envelope())
   for (const message of [
     'Hur håller jag motivationen när vikten står still?',
@@ -204,7 +223,7 @@ async function main() {
   const sensitiveHistory=[{role:'user',text:'How much insulin?'},{role:'coach',text:'Follow your care team guidance.'}]
   assert.equal(await getCoachReply('Why?',context('PRIVATE_NAME'),sensitiveHistory,true),await getCoachReply('Why?',context('PRIVATE_NAME'),sensitiveHistory))
   assert.equal(sent.length,before,'Direct sensitive follow-up stays local')
-  for(const message of ['och imorgon då?','vad tycker du istället?','jag hann inte göra det','kan jag köra ben istället?']) {
+  for(const message of ['och imorgon då?','vad tycker du istället?','jag hann inte göra det','kan jag köra ben istället?','30 minuter bara','kan jag byta ut bandet mot crosstrainer?']) {
     assert.equal(await getCoachReply(message,context('PRIVATE_NAME'),sensitiveHistory,true),await getCoachReply(message,context('PRIVATE_NAME'),sensitiveHistory))
   }
   assert.equal(sent.length,before,'New follow-up phrases preserve sensitive routing')
@@ -234,9 +253,14 @@ async function main() {
   assert(ui.includes('Aktivera AI Coach'));assert(ui.includes('Inte nu'))
   assert(ui.includes('JSON.stringify({ message: text })'));assert(!ui.includes('externalAIConsent'))
   assert(!ui.includes('type="checkbox"'));assert(ui.includes('setAICoachPreference(enabled)'))
-  assert(fs.readFileSync('src/app/(app)/account/page.tsx','utf8').includes('AICoachSettings'))
-  assert(fs.readFileSync('src/components/ai-coach-preference.tsx','utf8').includes('role="switch"'))
+  assert(fs.readFileSync('src/app/(app)/account/page.tsx','utf8').includes('AICoachInformation'))
+  const preferencesUI=fs.readFileSync('src/components/ai-coach-preference.tsx','utf8')
+  assert(!preferencesUI.includes('role="switch"'));assert(!preferencesUI.includes('type="checkbox"'))
+  const {AICoachInformation}=require('../src/components/ai-coach-preference')
+  const information=require('react-dom/server').renderToStaticMarkup(require('react').createElement(AICoachInformation))
+  assert(information.includes('AI Coach &amp; integritet'));assert(information.includes('href="/coach"'))
+  assert(!information.includes('<input'));assert(!information.includes('lokal Coach'))
   assert(!ui.includes('AI_API_KEY'));assert(!ui.includes('coach-provider'))
-  console.log('PASS saved consent, undecided/disabled accounts, activation persistence, settings toggles, auth/origin, user isolation, Gemini path, bounded history, minimized payload, secrets, failures/timeout/invalid output, safety and local fallback')
+  console.log('PASS saved consent, undecided/disabled accounts, activation persistence, Account information/no mode switch, saved preference boundaries, multi-turn duration/substitution continuity, auth/origin, user isolation, Gemini path, bounded history, minimized payload, secrets, failures/timeout/invalid output, safety and local fallback')
 }
 main().catch(error=>{console.error(error);process.exitCode=1})

@@ -6,7 +6,7 @@ import { dailyNutritionForUser } from "@/lib/daily-nutrition"
 import { type Nutrition } from "@/lib/nutrition"
 import { nutritionProposal, decideNutrition, type BalanceScope } from "@/lib/nutrition-balancing"
 import { type BodyData, validBodyData } from "@/lib/body-data"
-import { readPreferences } from "@/lib/preferences"
+import { readPreferences, readMeasurements, measurementLabels, type MeasurementKey } from "@/lib/preferences"
 import { primaryGoal } from "@/lib/nutrition"
 import { startOfWeekMonday } from "@/lib/plan-types"
 import { createHash } from "node:crypto"
@@ -76,15 +76,28 @@ export async function chooseNutritionProposal(scope:BalanceScope,key:string,acce
   await decideNutrition(await identity(),scope,key,accept)
   revalidatePath("/", "layout")
 }
-export async function saveBodyData(input:BodyData & {height:number|null;currentWeight:number|null}) {
-  // Baseline correction only: dated measurements are explicitly saved in Progress.
+export async function getBodyMeasurements() {
+  const logs=await prisma.dailyLog.findMany({where:{userId:await identity(),measurements:{not:null}},orderBy:{date:"asc"},select:{measurements:true}})
+  return logs.reduce((values,log)=>({...values,...readMeasurements(log.measurements)}),{} as Partial<Record<MeasurementKey,number>>)
+}
+export async function saveBodyData(input:BodyData & {height:number|null;currentWeight:number|null;waist?:number;trackedMeasurements?:MeasurementKey[];values?:Partial<Record<MeasurementKey,number>>}) {
   const userId=await identity()
   if (!input || !validBodyData(input) || [[input.height,100,250],[input.currentWeight,30,400]].some(([value,min,max])=>value!==null&&(typeof value!=="number"||!Number.isFinite(value)||value<min!||value>max!))) throw new Error("Kontrollera grunddata / Check baseline data")
+  if (input.waist!==undefined && (!Number.isFinite(input.waist)||input.waist<30||input.waist>250)) throw new Error("Kontrollera midjemåttet / Check waist measurement")
+  if (input.trackedMeasurements!==undefined && (!Array.isArray(input.trackedMeasurements)||input.trackedMeasurements.length>6||input.trackedMeasurements.some(key=>!Object.hasOwn(measurementLabels,key)))) throw new Error("Kontrollera dina mått / Check measurements")
   await prisma.$transaction(async tx=>{
     const user=await tx.user.findUniqueOrThrow({where:{id:userId}})
-    const preferences={...readPreferences(user.preferences),birthYear:input.birthYear,sexForEnergy:input.sexForEnergy}
+    const preferences={...readPreferences(user.preferences),birthYear:input.birthYear,sexForEnergy:input.sexForEnergy,...(input.trackedMeasurements?{trackedMeasurements:[...new Set(input.trackedMeasurements)]}:{})}
+    if(input.values && Object.entries(input.values).some(([key,value])=>!preferences.trackedMeasurements.includes(key as MeasurementKey)||typeof value!=="number"||!Number.isFinite(value)||value<=0||value>250)) throw new Error("Kontrollera dina mått / Check measurements")
     const goal=primaryGoal(user), maintaining=goal==="maintain"||goal==="retain-muscle"
-    await tx.user.update({where:{id:userId},data:{preferences:JSON.stringify(preferences),height:input.height,currentWeight:input.currentWeight,...(maintaining&&user.targetWeight!==null?{targetWeight:input.currentWeight}:{} )}})
+    await tx.user.update({where:{id:userId},data:{preferences:JSON.stringify(preferences),height:input.height,currentWeight:input.currentWeight,waist:input.waist,...(maintaining&&user.targetWeight!==null?{targetWeight:input.currentWeight}:{} )}})
+    // Use the existing unique user/day measurement record; hidden fields and older days survive.
+    if((input.trackedMeasurements!==undefined&&input.currentWeight!==null)||input.waist!==undefined||Object.keys(input.values??{}).length){
+      const date=new Date();date.setHours(0,0,0,0)
+      const old=await tx.dailyLog.findUnique({where:{userId_date:{userId,date}}})
+      const data={weight:input.currentWeight??undefined,waist:input.waist,...(Object.keys(input.values??{}).length?{measurements:JSON.stringify({...readMeasurements(old?.measurements??null),...input.values})}:{})}
+      await tx.dailyLog.upsert({where:{userId_date:{userId,date}},create:{userId,date,...data},update:data})
+    }
   })
   revalidatePath("/","layout")
 }

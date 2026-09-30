@@ -9,6 +9,7 @@ Module._resolveFilename=function(request,...args){return resolve.call(this,reque
 Module._load=function(request,...args){if(request==='@/lib/auth')return {getAuthenticatedUserId:async()=>identity};if(request==='next/cache')return {revalidatePath(){}};return load.call(this,request,...args)}
 const prisma=require('../src/lib/prisma').default,actions=require('../src/app/actions')
 const {defaultPreferences,readPreferences}=require('../src/lib/preferences')
+const {saveBodyData,getBodyMeasurements}=require('../src/app/nutrition-actions')
 async function main(){
  const users=[]
  for(const [label,equipment] of [['A','hantlar, bänk'],['B','gummiband, kettlebell']]){
@@ -35,6 +36,8 @@ async function main(){
    {userId:users[0].id,workoutId:b.id,date:older,completed:true},
  ]})
  for(const [user,steps] of [[users[0],3210],[users[1],8765]])await prisma.dailyLog.create({data:{userId:user.id,date:yesterday,steps,stepsRecorded:true}})
+ await prisma.dailyLog.update({where:{userId_date:{userId:users[0].id,date:yesterday}},data:{mealsEaten:'["Lunch:1","Lunch:1","Dinner:2"]',measurements:'{"hip":99,"chest":101}'}})
+ await prisma.ownMeal.create({data:{userId:users[0].id,name:'Private meal',components:'PRIVATE_COMPONENTS',portion:'',mealType:'lunch',eatenAt:yesterday,nutrition:'{}'}})
  for(const [user,title,steps] of [[users[0],a.title,3210],[users[1],b.title,8765]]){
    identity=user.id
    const ctx=await actions.getCoachContext()
@@ -43,7 +46,28 @@ async function main(){
    assert(!JSON.stringify(ctx.recentActivity).includes('PRIVATE_NOTES'))
    assert(!JSON.stringify(ctx.recentActivity).includes(user.id))
    assert(!JSON.stringify(ctx.recentActivity).includes(user.email))
+   assert.equal(ctx.recentActivity.meals.find(row=>row.date===ctx.recentActivity.workouts[0].date).registered,user.id===users[0].id?3:0)
+   assert(!JSON.stringify(ctx.recentActivity).includes('PRIVATE_COMPONENTS'))
  }
+ identity=users[0].id
+ const baseline={height:175,currentWeight:79,waist:88,trackedMeasurements:['hip','chest'],values:{hip:102,chest:108}}
+ await saveBodyData({...baseline,userId:users[1].id})
+ await saveBodyData({...baseline,values:{hip:103}})
+ assert.equal(await prisma.dailyLog.count({where:{userId:identity,date:today}}),1,'Same-day save upserts')
+ assert.deepEqual(await getBodyMeasurements(),{hip:103,chest:108})
+ const old=await prisma.dailyLog.findUnique({where:{userId_date:{userId:identity,date:yesterday}}})
+ assert.equal(old.measurements,'{"hip":99,"chest":101}','Previous history unchanged')
+ await saveBodyData({...baseline,trackedMeasurements:[],values:{}})
+ assert.deepEqual(await getBodyMeasurements(),{hip:103,chest:108},'Hiding retains history')
+ await saveBodyData({...baseline,values:{}})
+ assert.deepEqual(await getBodyMeasurements(),{hip:103,chest:108},'Re-enabling / empty inputs retain history')
+ const before=await prisma.user.findUnique({where:{id:identity}})
+ for(const invalid of [{waist:0},{values:{hip:NaN}},{values:{hip:251}},{values:{unknown:55}},{trackedMeasurements:['invalid']}])await assert.rejects(saveBodyData({...baseline,...invalid}))
+ assert.deepEqual(await prisma.user.findUnique({where:{id:identity}}),before,'Invalid save is atomic')
+ identity=users[1].id
+ assert.deepEqual(await getBodyMeasurements(),{})
+ assert.equal((await actions.getUser()).waist,null)
+ identity=null;await assert.rejects(getBodyMeasurements());await assert.rejects(saveBodyData(baseline))
  console.log('PASS real SQLite onboarding/equipment storage, public hydration, later preference save, user-scoped seven-day Coach activity and minimal projection')
 }
 main().catch(error=>{console.error(error);process.exitCode=1}).finally(()=>prisma.$disconnect())

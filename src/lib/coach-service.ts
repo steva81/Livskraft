@@ -64,10 +64,12 @@ export async function getCoachReply(input:string,ctx:CoachContext, recentHistory
   const unsafe = /fasta|svält|straff|kompens|compensat|\bfasting\b|\bfast\s+(?:to|for|instead)\b|(?:should|can|must|want to|need to)\s+(?:i\s+)?fast\b|starv|punish|earn.*food|förtjäna.*mat|skip.*meal|hoppa över.*(?:mat|måltid)|(?:burn|bränn|förbränn).*(?:food|meal|mat|måltid)|(?:extra.*(?:träning|exercise)|träna extra).*(?:åt|ätit|ate|food|mat)|(?:lose|gain|weight loss|gå (?:ner|ned|upp)|viktminsk).*(?:rapid|quick|fast(?! food)|snabb|fort)|(?:extreme|severe|crash|extrem).*(?:diet|restrict|kalori|calori)|(?:eat|äta|ät|eating).*(?:\b[1-8]\d{0,2})\s*(?:kcal|calories|kalorier).*(?:a day|per day|daily|om dagen|per dag)/i.test(safetyText)
   if (ctx.readiness?.ready === false || (ctx.goal && savedGoalSafety(ctx.goal)?.level === "blocked") ||
       medical || unsafe) return fallback
-  // Ground generation in checked advice without passing the full profile or name.
-  const safeReply = await fallbackCoachReply(input,{...ctx,userName:""},history)
+  // Gemini reasons from conversation and stored facts. Only food questions get
+  // an optional checked dietary reference; training/dialogue never get a script.
+  const reference = /\bmat\b|måltid|recept|kost|allerg|protein|\bfood\b|\bmeal|\beat\b|recipe|dietary/i.test(input)
+    ? await fallbackCoachReply(input,{...ctx,userName:""},history) : undefined
   const { generateCoachReply } = await import("./coach-provider")
-  return await generateCoachReply(input,ctx.language === "en" ? "en" : "sv",history,safeReply,needsRecentActivity(input,history)?ctx.recentActivity:undefined) ?? fallback
+  return await generateCoachReply(input,ctx.language === "en" ? "en" : "sv",history,reference,needsRecentActivity(input,history)?ctx.recentActivity:undefined) ?? fallback
 }
 
 async function fallbackCoachReply(input:string,ctx:CoachContext, recentHistory:ConversationMessage[] = []):Promise<string> {

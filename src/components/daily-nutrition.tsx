@@ -11,6 +11,7 @@ import { analyzeMealPhoto, photoTask } from "@/lib/photo-meal-client"
 import { browserUUID } from "@/lib/browser-uuid"
 import { Button } from "./ui/button"
 import { NutritionBalance } from "./nutrition-balance"
+import { MealCamera } from "./meal-camera"
 
 function localTime(date = new Date()) { return new Date(+date-date.getTimezoneOffset()*60000).toISOString().slice(0,16) }
 function blank(): OwnMealInput { return {name:"",components:"",portion:"",mealType:"other",eatenAt:localTime(),nutrition:{calories:null,protein:null,carbs:null,fat:null,fibre:null}} }
@@ -29,23 +30,24 @@ export function DailyNutrition({refreshKey = "",onPlanChanged}: {refreshKey?: st
   useEffect(()=>{if(photo)preview.current?.scrollIntoView({block:"nearest",behavior:"smooth"})},[photo])
   useEffect(()=>{if(estimate)result.current?.scrollIntoView({block:"start",behavior:"smooth"})},[estimate])
   const [busy,setBusy]=useState(false), [error,setError]=useState("")
+  const [cameraOpen,setCameraOpen]=useState(false)
+  useEffect(()=>{if(!draftOpen)setCameraOpen(false)},[draftOpen])
   const refresh=async()=>{const [d,e]=await Promise.all([getDailyNutrition(),listOwnMeals()]);setData(d);setEntries(e)}
   useEffect(()=>{void refresh().catch(()=>setError(en?"Could not load nutrition.":"Kunde inte läsa näringsöversikten."))},[refreshKey,en])
   useEffect(()=>{const controller=new AbortController();fetch("/api/photo-meal",{signal:controller.signal,cache:"no-store"}).then(r=>r.json()).then(r=>setPhotoAvailable(r.available===true)).catch(()=>setPhotoAvailable(false));return()=>controller.abort()},[])
   useEffect(()=>()=>{if(photo)URL.revokeObjectURL(photo)},[photo])
   const perform=async(action:()=>Promise<void>)=>{if(locked.current)return;locked.current=true;setBusy(true);setError("");try{await action();await photoTask(refresh())}catch(e){setError(e instanceof Error&&e.message!=="timeout"?e.message:t("Kunde inte bekräfta sparandet. Försök igen med samma utkast.","Could not confirm the save. Retry with the same draft."))}finally{locked.current=false;setBusy(false)}}
-  const choosePhoto=(event:ChangeEvent<HTMLInputElement>)=>{
-    const file=event.currentTarget.files?.[0]
+  const choosePhotoFile=(file:File|undefined)=>{
     if(!file)return
     if(file.size>10*1024*1024||!["image/jpeg","image/png","image/webp"].includes(file.type)){
       setError(t("Välj JPG, PNG eller WebP under 10 MB.","Choose JPG, PNG or WebP under 10 MB."));return
     }
     setPhoto(URL.createObjectURL(file));setPhotoFile(file);setEstimate(null);setPhotoToken(null);setError("")
-    event.currentTarget.value=""
   }
+  const choosePhoto=(event:ChangeEvent<HTMLInputElement>)=>{choosePhotoFile(event.currentTarget.files?.[0]);event.currentTarget.value=""}
   return <section className="nutrition-panel rounded-2xl border bg-white p-5 sm:p-6 space-y-4" data-localize="off">
     <h2 className="text-xl font-semibold">{t("Dagens energi och näring","Today's energy and nutrition")}</h2>
-    <Button disabled={busy} onClick={()=>{setDraft(blank());setPhoto(null);setPhotoFile(null);setEstimate(null);setPhotoToken(null)}}>{t("Lägg till egen måltid","Add own meal")}</Button>
+    <Button disabled={busy} onClick={()=>{setCameraOpen(false);setDraft(blank());setPhoto(null);setPhotoFile(null);setEstimate(null);setPhotoToken(null)}}>{t("Lägg till egen måltid","Add own meal")}</Button>
     <p className="text-sm">{t("Registrera med foto eller fyll i manuellt.","Log with a photo or enter manually.")}</p>
     {data && <>
       {data.target && <p className="text-sm">{bodyLabels[language][data.target.confidence]}</p>}
@@ -70,14 +72,15 @@ export function DailyNutrition({refreshKey = "",onPlanChanged}: {refreshKey?: st
       <div className="grid gap-3 sm:grid-cols-2"><label>{t("Måltidstyp","Meal type")}<select className="w-full border rounded p-2" value={draft.mealType} onChange={e=>setDraft({...draft,mealType:e.target.value})}>{["breakfast","lunch","dinner","snack","other"].map((v,i)=><option key={v} value={v}>{(en?["Breakfast","Lunch","Dinner","Snack","Other"]:["Frukost","Lunch","Middag","Mellanmål","Annat"])[i]}</option>)}</select></label><label>{t("Datum och tid","Date and time")}<input disabled={!!photoToken} required type="datetime-local" className="w-full min-w-0 border rounded p-2" value={draft.eatenAt} onChange={e=>setDraft({...draft,eatenAt:e.target.value})}/></label></div>
       <fieldset className="space-y-2"><legend>{t("Foto (frivilligt)","Photo (optional)")}</legend>
         <div className="flex flex-wrap gap-2">
-          <label className="relative flex min-h-12 cursor-pointer items-center justify-center rounded-xl border border-primary px-4 text-primary focus-within:ring-2">{t("Ta foto","Take photo")}<input aria-label={t("Ta foto","Take photo")} className="sr-only" type="file" accept="image/jpeg,image/png,image/webp" capture="environment" onChange={choosePhoto}/></label>
-          <label className="relative flex min-h-12 cursor-pointer items-center justify-center rounded-xl border border-primary px-4 text-primary focus-within:ring-2">{t("Välj bild","Choose image")}<input aria-label={t("Välj bild","Choose image")} className="sr-only" type="file" accept="image/jpeg,image/png,image/webp" onChange={choosePhoto}/></label>
+          <Button type="button" variant="outline" onClick={()=>setCameraOpen(true)}>{t("Ta foto","Take photo")}</Button>
+          <label className="relative flex min-h-12 cursor-pointer items-center justify-center rounded-xl border border-primary px-4 text-primary focus-within:ring-2">{t("Välj bild","Choose image")}<input aria-label={t("Välj bild","Choose image")} className="sr-only" type="file" accept="image/jpeg,image/png,image/webp" onClick={()=>setCameraOpen(false)} onChange={choosePhoto}/></label>
         </div>
       </fieldset>
+      {cameraOpen&&<MealCamera en={en} onUse={choosePhotoFile} onClose={()=>setCameraOpen(false)}/>}
       {photo&&<Button type="button" variant="outline" onClick={()=>{setPhoto(null);setPhotoFile(null);setEstimate(null);setPhotoToken(null)}}>{t("Ta bort bild","Remove image")}</Button>}
       {photo && <div ref={preview} className="relative h-48 w-full"><Image unoptimized fill sizes="(max-width: 768px) 100vw, 800px" src={photo} alt={t("Din måltid, endast lokal förhandsvisning","Your meal, local preview only")} className="rounded object-contain"/></div>}
       <p className="text-sm">{t("När du väljer Analysera bild med AI skickas bilden till Googles externa AI-tjänst Gemini. Fotografera bara maten. Bilden förminskas och metadata tas bort. Livskraft sparar inte bilden. Ingen profil, hälsoinformation eller Coach-historik skickas.","When you choose Analyze image with AI, the image is sent to Google's external AI service Gemini. Photograph only the food. The image is resized and metadata removed. Livskraft does not store the image. No profile, health information or Coach history is sent.")}</p>
-      <Button type="button" variant="outline" disabled={!photoAvailable||!photoFile||busy} onClick={()=>void perform(async()=>{
+      <Button type="button" variant="outline" disabled={!photoAvailable||!photoFile||busy||cameraOpen} onClick={()=>void perform(async()=>{
         if(!photoFile)return
         try {
           const result=await photoTask(analyzeMealPhoto(photoFile,language,AbortSignal.timeout(30000)))

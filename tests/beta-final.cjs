@@ -34,7 +34,8 @@ const logs=[
 const queries=[]
 const db={
   workoutLog:{findMany:async query=>{queries.push(query);assert(query.where.userId);assert.equal(query.where.completed,true);assert.equal(query.take,29);assert(!JSON.stringify(query.select).includes('notes'));return workouts.filter(row=>row.userId===query.where.userId&&row.completed&&row.date>=query.where.date.gte&&row.date<query.where.date.lt).map(row=>({date:row.date,workout:row.workout}))}},
-  dailyLog:{findMany:async query=>{queries.push(query);assert(query.where.userId);assert.equal(query.take,7);assert.deepEqual(Object.keys(query.select).sort(),['date','steps','stepsRecorded']);return logs.filter(row=>row.userId===query.where.userId&&row.date>=query.where.date.gte&&row.date<query.where.date.lt)}},
+  dailyLog:{findMany:async query=>{queries.push(query);assert(query.where.userId);assert.equal(query.take,7);assert.deepEqual(Object.keys(query.select).sort(),['date','mealsEaten','steps','stepsRecorded']);return logs.filter(row=>row.userId===query.where.userId&&row.date>=query.where.date.gte&&row.date<query.where.date.lt).map(row=>({...row,mealsEaten:row.userId==='A'?'["Lunch:1","Lunch:1","Dinner:2"]':'[]'}))}},
+  ownMeal:{groupBy:async query=>{assert(query.where.userId);return query.where.userId==='A'?[{eatenAt:today,_count:{_all:2}}]:[]}},
 }
 async function main(){
  const a=await recentCoachActivity('A',db,null,now),b=await recentCoachActivity('B',db,undefined,now)
@@ -48,8 +49,22 @@ async function main(){
  assert.match(recentActivityReply('Vad har jag tränat den här veckan?',a,false),/A Chest/)
  assert.match(recentActivityReply('Vad tränade jag idag?',a,false),/inget avklarat/)
  assert.match(recentActivityReply('Hur har mina steg sett ut de senaste dagarna?',a,false),/inte registrerat/)
+ assert.equal(a.meals.find(row=>row.date===a.today).registered,2)
+ assert.equal(a.meals.find(row=>row.date==='2026-09-29').registered,2,'Duplicate planned keys count once')
+ for(const question of ['Hur mycket har jag tränat och hur många mål mat har jag ätit','Hur har veckan sett ut med träning och måltider?','Hur många måltider har jag registrerat idag?','Har jag registrerat mat idag?','Hur många steg och måltider har jag registrerat?','Hur många pass, steg och måltider har jag registrerat?']){
+   const reply=recentActivityReply(question,a,false);assert(reply,question);assert.match(reply,/registrerat \d+ måltider/);assert(!reply.includes('ätit'))
+ }
+ assert.match(recentActivityReply('Hur många pass har jag registrerat?',a,false),/1 avklarade pass/)
+ const combined=recentActivityReply('Hur många steg och träningspass har jag registrerat den här veckan?',a,false)
+ assert.match(combined,/1 avklarade pass/);assert.match(combined,/Registrerade steg: 0/)
+ assert.match(recentActivityReply('Hur många steg har jag registrerat den här veckan?',a,false),/okända/)
+ assert(b.meals.every(row=>row.registered===0),'Meal counts isolate users')
  const empty=await recentCoachActivity('NONE',db,undefined,now)
  assert.equal(empty.workouts.length,0);assert(empty.steps.every(row=>row.steps===null))
+ assert.match(recentActivityReply('Hur många steg har jag registrerat den här veckan?',empty,false),/stegantalet är okänt/)
+ assert(!recentActivityReply('Hur har mina steg sett ut den här veckan?',a,false).includes('2026-09-27'))
+ assert(empty.meals.every(row=>row.registered===0))
+ assert.match(recentActivityReply('Hur många måltider har jag registrerat idag?',empty,false),/registrerat 0 måltider/)
  assert.match(recentActivityReply('Har jag registrerat någon träning den här veckan?',empty,false),/inget avklarat/)
  assert.equal(needsRecentActivity('Help me with dinner.',[{role:'user',text:'I trained yesterday'}]),false,'Unrelated turn does not broaden provider context')
  assert.equal(needsRecentActivity('och imorgon då?',[{role:'user',text:'I trained yesterday'}]),true)
@@ -76,16 +91,17 @@ async function main(){
  const photoAST=ts.createSourceFile('daily-nutrition.tsx',photoSource,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX)
  const fileInputs=[];let pickerHandler
  function visit(node){
-   if(ts.isVariableDeclaration(node)&&node.name.getText(photoAST)==='choosePhoto')pickerHandler=node.initializer.getText(photoAST)
+   if(ts.isVariableDeclaration(node)&&node.name.getText(photoAST)==='choosePhotoFile')pickerHandler=node.initializer.getText(photoAST)
    if(ts.isJsxSelfClosingElement(node)&&node.tagName.getText(photoAST)==='input'){
      const attributes=node.attributes.properties.filter(ts.isJsxAttribute)
      if(attributes.some(attribute=>attribute.name.getText(photoAST)==='type'&&attribute.initializer?.text==='file'))fileInputs.push(attributes)
    }
    ts.forEachChild(node,visit)
  }
- visit(photoAST);assert.equal(fileInputs.length,2)
+ visit(photoAST);assert.equal(fileInputs.length,1)
  const captures=fileInputs.map(attributes=>attributes.find(attribute=>attribute.name.getText(photoAST)==='capture')?.initializer?.text)
- assert.deepEqual(captures,['environment',undefined],'Camera requests rear capture; library input must not request capture')
+ assert.deepEqual(captures,[undefined],'Library input must not request camera capture')
+ assert(photoSource.includes('<MealCamera en={en} onUse={choosePhotoFile}'))
  for(const attributes of fileInputs){
    assert.equal(attributes.find(attribute=>attribute.name.getText(photoAST)==='onChange').initializer.expression.getText(photoAST),'choosePhoto')
    assert.equal(attributes.find(attribute=>attribute.name.getText(photoAST)==='accept').initializer.text,'image/jpeg,image/png,image/webp')
@@ -95,17 +111,17 @@ async function main(){
    setPhoto:value=>photoState.photo=value,setPhotoFile:value=>photoState.file=value,setEstimate:value=>photoState.estimate=value,setPhotoToken:value=>photoState.token=value,setError:value=>photoState.error=value}
  vm.runInNewContext(ts.transpileModule(`module.exports = ${pickerHandler}`,{compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText,pickerScope)
  const select=pickerScope.module.exports,unchanged={...photoState}
- for(let source=0;source<2;source++){select({currentTarget:{files:[],value:''}});assert.deepEqual(photoState,unchanged,'Cancel preserves preview/review/token')}
- select({currentTarget:{files:[{type:'image/svg+xml',size:100}],value:'invalid'}})
+ select(undefined);assert.deepEqual(photoState,unchanged,'Cancel preserves preview/review/token')
+ select({type:'image/svg+xml',size:100})
  assert.equal(photoState.photo,unchanged.photo);assert.equal(photoState.token,unchanged.token);assert(photoState.error)
- select({currentTarget:{files:[{type:'image/jpeg',size:11*1024*1024}],value:'oversize'}})
+ select({type:'image/jpeg',size:11*1024*1024})
  assert.equal(photoState.file,unchanged.file);assert.equal(photoState.estimate,unchanged.estimate)
  for(const type of ['image/jpeg','image/png','image/webp']){
    const file={type,size:100},event={currentTarget:{files:[file],value:'selected'}}
-   select(event);assert.equal(photoState.file,file);assert.equal(photoState.photo,'new-preview')
-   assert.equal(photoState.estimate,null);assert.equal(photoState.token,null);assert.equal(photoState.error,'');assert.equal(event.currentTarget.value,'')
+   select(file);assert.equal(photoState.file,file);assert.equal(photoState.photo,'new-preview')
+   assert.equal(photoState.estimate,null);assert.equal(photoState.token,null);assert.equal(photoState.error,'')
  }
- console.log('PASS shared camera/library inputs, rear-capture hint, cancel, validation, replacement and same-file reselection')
+ console.log('PASS shared camera/file downstream validation, cancel and replacement; registered meal counts, combined factual domains and isolation')
  console.log('PASS recent activity calendar/relative dates, missing data, scoped queries, isolation, follow-ups, numeric empty editing/ranges, equipment round-trip, escaped Coach formatting and mobile destinations')
 }
 main().catch(error=>{console.error(error);process.exitCode=1})

@@ -157,6 +157,7 @@ function UserCoachPage() {
       </div>
 
       <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_220px]"><div className="min-w-0 space-y-5">
+      {aiCoachEnabled===false&&<Button variant="outline" disabled={loading||savingPreference||!historyReady} onClick={()=>setPendingMessage(input)}>{language==="en"?"Activate AI Coach":"Aktivera AI Coach"}</Button>}
       {overviewError && <p role="status" className="text-sm">Kunde inte läsa dagens översikt. Ladda om sidan för att försöka igen.</p>}
       {historyError && <p role="alert" className="text-sm text-red-700">{historyError}</p>}
       {overview&&!overview.ready&&<p data-localize="off" className="rounded-xl border p-4">{language==="en"?"Complete My Plan for personal recommendations. General guidance is available meanwhile.":"Komplettera Min plan för personliga rekommendationer. Under tiden finns allmänna råd."} <a className="underline" href="/my-plan">{language==="en"?"Complete My Plan":"Komplettera min plan"}</a></p>}
@@ -172,7 +173,7 @@ function UserCoachPage() {
       <Card className="flex flex-col overflow-hidden border-0 bg-transparent shadow-none">
         {pendingMessage!==null&&<section data-localize="off" aria-labelledby="ai-coach-activation" className="rounded-xl border bg-white p-4 space-y-3">
           <h2 ref={activationTitle} tabIndex={-1} id="ai-coach-activation" className="font-semibold">{language==="en"?"Activate AI Coach":"Aktivera AI Coach"}</h2>
-          <p className="text-sm">{language==="en"?"Livskraft uses Google Gemini for more conversational Coach responses. Your questions and limited recent Coach context may be sent to Google. Your choice is saved to your account and can be changed in Account.":"Livskraft använder Google Gemini för mer samtalande Coach-svar. Dina frågor och begränsad aktuell Coach-kontext kan skickas till Google. Valet sparas på ditt konto och kan ändras under Konto."}</p>
+          <p className="text-sm">{language==="en"?"Livskraft uses Google Gemini for more conversational Coach responses. Your questions and limited recent Coach context may be sent to Google. Activation is saved to your account.":"Livskraft använder Google Gemini för mer samtalande Coach-svar. Dina frågor och begränsad aktuell Coach-kontext kan skickas till Google. Aktiveringen sparas på ditt konto."}</p>
           <AICoachPrivacy />
           <div className="flex gap-2"><Button disabled={savingPreference} onClick={()=>void chooseAICoach(true)}>{language==="en"?"Activate AI Coach":"Aktivera AI Coach"}</Button><Button variant="outline" disabled={savingPreference} onClick={()=>void chooseAICoach(false)}>{language==="en"?"Not now":"Inte nu"}</Button></div>
         </section>}
