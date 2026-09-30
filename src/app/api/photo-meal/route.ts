@@ -13,7 +13,12 @@ export async function GET() {
 
 export async function POST(request: Request) {
   if (!await getAuthenticatedUserId()) return reply({ error: "unauthorized" }, 401)
-  if (request.headers.get("origin") !== new URL(request.url).origin) return reply({ error: "forbidden" }, 403)
+  // A reverse proxy can give Next an internal URL. Use the configured public
+  // origin, never client-supplied forwarded headers, for the CSRF check.
+  let expectedOrigin: string
+  try { expectedOrigin = new URL(process.env.NEXTAUTH_URL || request.url).origin }
+  catch { return reply({ error: "forbidden" }, 403) }
+  if (request.headers.get("origin") !== expectedOrigin) return reply({ error: "forbidden" }, 403)
   const provider = photoMealProvider()
   if (!provider.available) return reply({ error: "unavailable" }, 503)
   // Raw image body avoids filenames and bounds even chunked requests.
