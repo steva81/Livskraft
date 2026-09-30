@@ -2,6 +2,8 @@
 
 Manuell registrering fungerar och går via `src/lib/steps.ts`. `stepsRecorded` skiljer en uttryckligen sparad nolla från en dag som bara har öppnats. Äldre positiva stegloggar räknas också som registrerade. Ingen sensor-, HealthKit- eller Health Connect-åtkomst finns i webbappen.
 
+**Framtida förbättring, inte beta-funktion:** En kommande Livskraft-version kan importera steg och aktivitet från telefonens eller smartklockans hälsoplattform, exempelvis Apple Health/Apple Watch och Androids hälsoplattformar. Detta är en roadmap-idé; ingen automatisk synk eller integration har implementerats i betan.
+
 ## Föreslagen väg
 
 1. En framtida iOS-app använder HealthKit och en Android-app använder Health Connect. Dessa är plattforms-API:er; att lägga en knapp i webbappen ger ingen faktisk åtkomst. HealthKit kräver rätt appkapabilitet och användarens tillstånd: [Apple HealthKit](https://developer.apple.com/documentation/healthkit). Android kräver bland annat rättigheten READ_STEPS: [Health Connect – kom igång](https://developer.android.com/health-and-fitness/health-connect/get-started).

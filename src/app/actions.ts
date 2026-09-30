@@ -21,6 +21,7 @@ import { aggregateIngredients } from "@/lib/shopping"
 import { adaptiveStateForUser, decideAdaptiveWeek } from "@/lib/adaptive"
 import { recordManualSteps } from "@/lib/steps"
 import { activityGuidance } from "@/lib/activity"
+import { recentCoachActivity } from "@/lib/coach-activity"
 
 import { assessGoal, savedGoalSafety } from "@/lib/goal-safety"
 
@@ -385,7 +386,7 @@ export async function getTodayPlanContext() {
   const meals = day ? parsePlannedMeals(day.meals) : []
   const workouts = await getWorkouts()
   const workout = day?.workoutId ? workouts.find((w) => w.id === day.workoutId) ?? null : null
-  return { meals, workout, activity: day?.activity ?? null }
+  return { meals, workout, activity: day?.activity ?? null, hasPlan:!!day, hasPlannedWorkout:!!day?.workoutId }
 }
 
 export async function getShoppingList() {
@@ -490,6 +491,7 @@ export async function getCoachContext() {
   const preferences = readPreferences(user.preferences)
   const eaten = mealCompletionKeys(log?.mealsEaten)
   return {
+    recentActivity:await recentCoachActivity(user.id,prisma,day.hasPlan&&(!day.hasPlannedWorkout||day.workout)?day.workout:undefined),
     health: preferences.health, language: preferences.language, budget: preferences.budget, workSchedule: preferences.workSchedule,
     readiness:profileReadiness(user),
     primaryGoal: primaryGoal(user), nutrition: await dailyNutritionForUser(user.id),

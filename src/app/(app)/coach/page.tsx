@@ -13,6 +13,7 @@ import { getCoachOverview } from "@/app/actions"
 import { displayValue } from "@/lib/display"
 import { useMode } from "@/lib/ModeContext"
 import { AICoachPrivacy, setAICoachPreference } from "@/components/ai-coach-preference"
+import { CoachText } from "@/components/coach-text"
 
 interface Message {
   id: string | number
@@ -193,7 +194,7 @@ function UserCoachPage() {
                     <Leaf className="w-3 h-3" /> Coach
                   </div>
                 )}
-                <span data-localize={msg.role==="user"?"off":undefined}>{msg.text}</span>
+                {msg.role==="user"?<span data-localize="off">{msg.text}</span>:<CoachText text={msg.text}/>}
               </div>
             </div>
           ))}

@@ -1,7 +1,7 @@
 "use client"
 import Image from "next/image"
 import { bodyLabels } from "@/lib/body-data"
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useRef, useState, type ChangeEvent } from "react"
 import { getDailyNutrition, listOwnMeals, saveOwnMeal, savePhotoMeal, deleteOwnMeal, type OwnMealInput } from "@/app/nutrition-actions"
 import { goalLabels, goalGuidance, parseNutrition, type Nutrition } from "@/lib/nutrition"
 import { useMode } from "@/lib/ModeContext"
@@ -23,12 +23,26 @@ export function DailyNutrition({refreshKey = "",onPlanChanged}: {refreshKey?: st
   const [photoFile,setPhotoFile]=useState<File|null>(null),[estimate,setEstimate]=useState<PhotoEstimate|null>(null)
   const [photoAvailable,setPhotoAvailable]=useState(false), [photoToken,setPhotoToken]=useState<string|null>(null)
   const locked=useRef(false)
+  const form=useRef<HTMLFormElement>(null),preview=useRef<HTMLDivElement>(null),result=useRef<HTMLDivElement>(null)
+  const draftOpen=!!draft
+  useEffect(()=>{if(draftOpen)form.current?.scrollIntoView({block:"start",behavior:"smooth"})},[draftOpen])
+  useEffect(()=>{if(photo)preview.current?.scrollIntoView({block:"nearest",behavior:"smooth"})},[photo])
+  useEffect(()=>{if(estimate)result.current?.scrollIntoView({block:"start",behavior:"smooth"})},[estimate])
   const [busy,setBusy]=useState(false), [error,setError]=useState("")
   const refresh=async()=>{const [d,e]=await Promise.all([getDailyNutrition(),listOwnMeals()]);setData(d);setEntries(e)}
   useEffect(()=>{void refresh().catch(()=>setError(en?"Could not load nutrition.":"Kunde inte läsa näringsöversikten."))},[refreshKey,en])
   useEffect(()=>{const controller=new AbortController();fetch("/api/photo-meal",{signal:controller.signal,cache:"no-store"}).then(r=>r.json()).then(r=>setPhotoAvailable(r.available===true)).catch(()=>setPhotoAvailable(false));return()=>controller.abort()},[])
   useEffect(()=>()=>{if(photo)URL.revokeObjectURL(photo)},[photo])
   const perform=async(action:()=>Promise<void>)=>{if(locked.current)return;locked.current=true;setBusy(true);setError("");try{await action();await photoTask(refresh())}catch(e){setError(e instanceof Error&&e.message!=="timeout"?e.message:t("Kunde inte bekräfta sparandet. Försök igen med samma utkast.","Could not confirm the save. Retry with the same draft."))}finally{locked.current=false;setBusy(false)}}
+  const choosePhoto=(event:ChangeEvent<HTMLInputElement>)=>{
+    const file=event.currentTarget.files?.[0]
+    if(!file)return
+    if(file.size>10*1024*1024||!["image/jpeg","image/png","image/webp"].includes(file.type)){
+      setError(t("Välj JPG, PNG eller WebP under 10 MB.","Choose JPG, PNG or WebP under 10 MB."));return
+    }
+    setPhoto(URL.createObjectURL(file));setPhotoFile(file);setEstimate(null);setPhotoToken(null);setError("")
+    event.currentTarget.value=""
+  }
   return <section className="nutrition-panel rounded-2xl border bg-white p-5 sm:p-6 space-y-4" data-localize="off">
     <h2 className="text-xl font-semibold">{t("Dagens energi och näring","Today's energy and nutrition")}</h2>
     <Button disabled={busy} onClick={()=>{setDraft(blank());setPhoto(null);setPhotoFile(null);setEstimate(null);setPhotoToken(null)}}>{t("Lägg till egen måltid","Add own meal")}</Button>
@@ -47,16 +61,21 @@ export function DailyNutrition({refreshKey = "",onPlanChanged}: {refreshKey?: st
     </>}
     {mode==="simple" && data?.target && data.consumed.count>0 && data.consumed.unknown.protein===0 && data.consumed.sum.protein<data.target.protein*0.7 && <p>{t("Lite mer protein skulle passa till nästa vanliga måltid om du är hungrig.","A little more protein could fit your next regular meal if you are hungry.")}</p>}
 
-    {draft && <form className="space-y-3 border-t pt-4" onSubmit={e=>{e.preventDefault();void perform(async()=>{if(photoToken)await photoTask(savePhotoMeal({token:photoToken,name:draft.name,components:draft.components,portion:draft.portion,mealType:draft.mealType,nutrition:draft.nutrition}));else await saveOwnMeal({...draft,eatenAt:new Date(draft.eatenAt).toISOString()});setDraft(null);setPhoto(null);setPhotoFile(null);setEstimate(null);setPhotoToken(null)})}}>
+    {draft && <form ref={form} className="space-y-3 border-t pt-4 scroll-mt-4" onSubmit={e=>{e.preventDefault();void perform(async()=>{if(photoToken)await photoTask(savePhotoMeal({token:photoToken,name:draft.name,components:draft.components,portion:draft.portion,mealType:draft.mealType,nutrition:draft.nutrition}));else await saveOwnMeal({...draft,eatenAt:new Date(draft.eatenAt).toISOString()});setDraft(null);setPhoto(null);setPhotoFile(null);setEstimate(null);setPhotoToken(null)})}}>
       <fieldset disabled={busy} className="space-y-3">
       <label className="block">{t("Måltidens namn","Meal name")}<input required maxLength={120} className="w-full border rounded p-2" value={draft.name} onChange={e=>setDraft({...draft,name:e.target.value})}/></label>
       <label className="block">{t("Livsmedel och ingredienser","Foods and components")}<textarea maxLength={2000} className="w-full border rounded p-2" value={draft.components} onChange={e=>setDraft({...draft,components:e.target.value})}/></label>
       <label className="block">{t("Portion / mängd","Portion / quantity")}<input maxLength={200} className="w-full border rounded p-2" value={draft.portion} onChange={e=>setDraft({...draft,portion:e.target.value})}/></label>
       {photoToken&&<p>{t("Sparas som dagens intag när du bekräftar.","Saved to today’s intake when you confirm.")}</p>}
       <div className="grid gap-3 sm:grid-cols-2"><label>{t("Måltidstyp","Meal type")}<select className="w-full border rounded p-2" value={draft.mealType} onChange={e=>setDraft({...draft,mealType:e.target.value})}>{["breakfast","lunch","dinner","snack","other"].map((v,i)=><option key={v} value={v}>{(en?["Breakfast","Lunch","Dinner","Snack","Other"]:["Frukost","Lunch","Middag","Mellanmål","Annat"])[i]}</option>)}</select></label><label>{t("Datum och tid","Date and time")}<input disabled={!!photoToken} required type="datetime-local" className="w-full min-w-0 border rounded p-2" value={draft.eatenAt} onChange={e=>setDraft({...draft,eatenAt:e.target.value})}/></label></div>
-      <label className="block">{t("Foto (frivilligt)","Photo (optional)")}<span className="mt-2 flex min-h-12 cursor-pointer items-center justify-center rounded-xl border border-primary px-4 text-primary focus-within:ring-2">{photo?t("Byt bild","Change image"):t("Ta foto eller välj bild","Take a photo or choose an image")}<input className="sr-only" type="file" accept="image/jpeg,image/png,image/webp" capture="environment" onChange={e=>{const file=e.target.files?.[0];if(!file)return;if(file.size>10*1024*1024||!["image/jpeg","image/png","image/webp"].includes(file.type)){setError(t("Välj JPG, PNG eller WebP under 10 MB.","Choose JPG, PNG or WebP under 10 MB."));return}setPhoto(URL.createObjectURL(file));setPhotoFile(file);setEstimate(null);setPhotoToken(null);setError("");e.target.value=""}}/></span></label>
+      <fieldset className="space-y-2"><legend>{t("Foto (frivilligt)","Photo (optional)")}</legend>
+        <div className="flex flex-wrap gap-2">
+          <label className="relative flex min-h-12 cursor-pointer items-center justify-center rounded-xl border border-primary px-4 text-primary focus-within:ring-2">{t("Ta foto","Take photo")}<input aria-label={t("Ta foto","Take photo")} className="sr-only" type="file" accept="image/jpeg,image/png,image/webp" capture="environment" onChange={choosePhoto}/></label>
+          <label className="relative flex min-h-12 cursor-pointer items-center justify-center rounded-xl border border-primary px-4 text-primary focus-within:ring-2">{t("Välj bild","Choose image")}<input aria-label={t("Välj bild","Choose image")} className="sr-only" type="file" accept="image/jpeg,image/png,image/webp" onChange={choosePhoto}/></label>
+        </div>
+      </fieldset>
       {photo&&<Button type="button" variant="outline" onClick={()=>{setPhoto(null);setPhotoFile(null);setEstimate(null);setPhotoToken(null)}}>{t("Ta bort bild","Remove image")}</Button>}
-      {photo && <Image unoptimized width={400} height={240} src={photo} alt={t("Din måltid, endast lokal förhandsvisning","Your meal, local preview only")} className="max-h-48 w-full rounded object-contain"/>}
+      {photo && <div ref={preview} className="relative h-48 w-full"><Image unoptimized fill sizes="(max-width: 768px) 100vw, 800px" src={photo} alt={t("Din måltid, endast lokal förhandsvisning","Your meal, local preview only")} className="rounded object-contain"/></div>}
       <p className="text-sm">{t("När du väljer Analysera bild med AI skickas bilden till Googles externa AI-tjänst Gemini. Fotografera bara maten. Bilden förminskas och metadata tas bort. Livskraft sparar inte bilden. Ingen profil, hälsoinformation eller Coach-historik skickas.","When you choose Analyze image with AI, the image is sent to Google's external AI service Gemini. Photograph only the food. The image is resized and metadata removed. Livskraft does not store the image. No profile, health information or Coach history is sent.")}</p>
       <Button type="button" variant="outline" disabled={!photoAvailable||!photoFile||busy} onClick={()=>void perform(async()=>{
         if(!photoFile)return
@@ -71,7 +90,7 @@ export function DailyNutrition({refreshKey = "",onPlanChanged}: {refreshKey?: st
         }
       })}>{busy?t("Arbetar…","Working…"):t("Analysera bild med AI","Analyze image with AI")}</Button>
       {!photoAvailable&&<p className="text-sm">{t("Foto-AI är inte tillgänglig. Du kan fylla i måltiden manuellt.","Photo AI is unavailable. You can enter the meal manually.")}</p>}
-      {estimate&&<div className="border rounded p-3 space-y-2" role="status">
+      {estimate&&<div ref={result} className="border rounded p-3 space-y-2 scroll-mt-4" role="status">
         <p className="font-medium">{t("AI-uppskattning – granska och korrigera","AI estimate – review and correct")}</p>
         <p>{t("Uppskattning från foto. Portionsstorlek och näringsvärden kan avvika. Kontrollera uppgifterna innan du sparar.","Estimate from photo. Portion size and nutrition values may differ. Review the values before saving.")}</p>
         <p>{t("AI:ns bedömda säkerhet","AI's estimated confidence")}: {estimate.confidence==="low"?t("Låg – kontrollera extra noga","Low – check carefully"):estimate.confidence==="medium"?t("Medel","Medium"):t("Hög – fortfarande en uppskattning","High – still an estimate")}</p>

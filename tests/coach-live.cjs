@@ -117,6 +117,22 @@ async function main() {
   await preferenceRoute.PATCH(preferenceRequest(true))
   await route.POST(new NextRequest('https://livskraft.example/api/coach',{method:'POST',body:JSON.stringify({message:'Help me today'})}))
   assert.equal(sent.length,enabledCalls+2,'Settings on enables Gemini without a client flag')
+  const activity={today:'2026-09-30',weekStartsOn:'2026-09-28',from:'2026-09-24',workouts:[{date:'2026-09-29',title:'A Chest',type:'gym',exercises:['Bench press']}],steps:[{date:'2026-09-29',steps:null}],workoutsTruncated:false,todayPlan:{status:'rest'}}
+  let continuity=[]
+  for(const message of ['vad ska jag träna idag','jag körde bröst igår','och imorgon då?','vad tycker du istället?','jag hann inte göra det','kan jag köra ben istället?']) {
+    const calls=sent.length
+    await getCoachReply(message,{...context('PRIVATE_NAME'),recentActivity:activity},continuity,true)
+    assert.equal(sent.length,calls+1)
+    const body=JSON.parse(sent.at(-1).options.body),payload=JSON.parse(body.contents[0].parts[0].text)
+    assert.deepEqual(payload.history,continuity)
+    assert.deepEqual(payload.recentActivity,activity)
+    assert(body.systemInstruction.parts[0].text.includes('Never claim a chat statement was logged'))
+    continuity=[...continuity,{role:'user',text:message},{role:'coach',text:'Take one manageable step today. You are in control.'}]
+  }
+  await getCoachReply('Vad tränade jag igår?',{...context('PRIVATE_NAME'),recentActivity:activity},[],true)
+  const activityPayload=JSON.parse(JSON.parse(sent.at(-1).options.body).contents[0].parts[0].text)
+  assert(activityPayload.checkedAdvice.includes('A Chest'))
+  assert.equal(await getCoachReply('Vad tränade jag igår?',{...context('PRIVATE_NAME'),language:'sv',recentActivity:activity}), 'Registrerade avklarade pass:\n2026-09-29: A Chest (Bench press)')
   const longHistory=Array.from({length:30},(_,i)=>({role:'user',text:`history-${i} `+'x'.repeat(1100)}))
   await getCoachReply('Help me today',context('PRIVATE_NAME'),longHistory,true)
   const bounded=JSON.parse(JSON.parse(sent.at(-1).options.body).contents[0].parts[0].text).history
@@ -188,6 +204,10 @@ async function main() {
   const sensitiveHistory=[{role:'user',text:'How much insulin?'},{role:'coach',text:'Follow your care team guidance.'}]
   assert.equal(await getCoachReply('Why?',context('PRIVATE_NAME'),sensitiveHistory,true),await getCoachReply('Why?',context('PRIVATE_NAME'),sensitiveHistory))
   assert.equal(sent.length,before,'Direct sensitive follow-up stays local')
+  for(const message of ['och imorgon då?','vad tycker du istället?','jag hann inte göra det','kan jag köra ben istället?']) {
+    assert.equal(await getCoachReply(message,context('PRIVATE_NAME'),sensitiveHistory,true),await getCoachReply(message,context('PRIVATE_NAME'),sensitiveHistory))
+  }
+  assert.equal(sent.length,before,'New follow-up phrases preserve sensitive routing')
   await getCoachReply('Hello',{...context('PRIVATE_NAME'),readiness:{ready:false,missing:['age']}},[],true)
   await getCoachReply('Hello',{...context('PRIVATE_NAME'),goal:{currentWeight:80,targetWeight:60,timeframeWeeks:4}},[],true)
   assert.equal(sent.length,before,'Safety-critical inputs stay local')

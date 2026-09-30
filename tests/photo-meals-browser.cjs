@@ -31,8 +31,13 @@ async function main(){
    const panel=page.locator('.nutrition-panel').first(),en=language==='en'
    const add=panel.getByRole('button',{name:en?'Add own meal':'Lägg till egen måltid',exact:true})
    await add.click()
+   const camera=panel.getByLabel(en?'Take photo':'Ta foto',{exact:true})
+   const library=panel.getByLabel(en?'Choose image':'Välj bild',{exact:true})
+   assert.equal(await camera.getAttribute('capture'),'environment')
+   assert.equal(await library.getAttribute('capture'),null)
+   assert.equal(await panel.locator('input[type=file]').count(),2)
    const png=await page.evaluate(()=>{const c=document.createElement('canvas');c.width=1600;c.height=900;c.getContext('2d').fillRect(0,0,1600,900);return c.toDataURL('image/png').split(',')[1]})
-   await panel.locator('input[type=file]').setInputFiles({name:'plate.png',mimeType:'image/png',buffer:Buffer.from(png,'base64')})
+   await panel.getByLabel(en?'Choose image':'Välj bild',{exact:true}).setInputFiles({name:'plate.png',mimeType:'image/png',buffer:Buffer.from(png,'base64')})
    assert.equal(posts,0);assert.equal(await prisma.ownMeal.count({where:{userId:user.id}}),0)
    const analyze=panel.getByRole('button',{name:en?'Analyze image with AI':'Analysera bild med AI',exact:true})
    await analyze.click();await panel.getByRole('alert').waitFor();await analyze.waitFor({state:'visible'})
@@ -40,13 +45,21 @@ async function main(){
    fail=false;await analyze.click()
    const confirm=panel.getByRole('button',{name:en?'Add to today':'Lägg till i idag',exact:true})
    await confirm.waitFor();assert(await panel.getByText(en?'Low – check carefully':'Låg – kontrollera extra noga',{exact:false}).isVisible())
+   const preview=panel.getByRole('img',{name:en?'Your meal, local preview only':'Din måltid, endast lokal förhandsvisning'})
+   const previewURL=await preview.getAttribute('src'),postsBeforeCancel=posts
+   const previewHeight=(await preview.boundingBox()).height
+   await camera.setInputFiles([]);await library.setInputFiles([])
+   assert(await confirm.isVisible(),'Canceling either input must retain the reviewed result')
+   assert.equal(await preview.getAttribute('src'),previewURL);assert.equal(posts,postsBeforeCancel)
 
-   await panel.locator('input[type=file]').setInputFiles({name:'plate2.png',mimeType:'image/png',buffer:Buffer.from(png,'base64')})
+   // Simulate a file returned by capture; opening the native camera needs device QA.
+   await camera.setInputFiles({name:'plate2.png',mimeType:'image/png',buffer:Buffer.from(png,'base64')})
    assert(await confirm.isHidden(), 'Replacing image must clear estimate')
+   assert.equal((await preview.boundingBox()).height,previewHeight,'Preview dimensions stay stable across sources')
    await analyze.click(); await confirm.waitFor()
    await panel.getByRole('button',{name:en?'Remove image':'Ta bort bild',exact:true}).click()
    assert(await confirm.isHidden(), 'Removing image must clear estimate')
-   await panel.locator('input[type=file]').setInputFiles({name:'plate3.png',mimeType:'image/png',buffer:Buffer.from(png,'base64')})
+   await panel.getByLabel(en?'Choose image':'Välj bild',{exact:true}).setInputFiles({name:'plate3.png',mimeType:'image/png',buffer:Buffer.from(png,'base64')})
    await analyze.click(); await confirm.waitFor()
 
    assert.equal(await prisma.ownMeal.count({where:{userId:user.id}}),0,'Review must not persist')

@@ -5,6 +5,7 @@ import { ModeProvider } from "@/lib/ModeContext"
 import { getAuthenticatedUserId } from "@/lib/auth"
 import { redirect } from "next/navigation"
 import { ModeControl } from "@/components/ModeControl"
+import { MobileNavigation } from "@/components/mobile-navigation"
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   if (!await getAuthenticatedUserId()) redirect("/login")
@@ -67,20 +68,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <div className="app-scroll wellness-content flex-1 overflow-y-auto p-4 sm:p-6 lg:p-10"><ModeControl />{children}</div>
 
           {/* Mobile Nav */}
-          <nav className="mobile-nav lg:hidden shrink-0 border-t bg-white flex items-center justify-around h-16">
-            <Link href="/home" className="flex flex-col items-center p-2 text-xs text-gray-500 hover:text-primary">
-              <Home className="h-5 w-5 mb-1" /> Hem
-            </Link>
-            <Link href="/plan" className="flex flex-col items-center p-2 text-xs text-gray-500 hover:text-primary">
-              <ListChecks className="h-5 w-5 mb-1" /> Plan
-            </Link>
-            <Link href="/training" className="flex flex-col items-center p-2 text-xs text-gray-500 hover:text-primary">
-              <Dumbbell className="h-5 w-5 mb-1" /> Träning
-            </Link>
-            <Link href="/coach" className="flex flex-col items-center p-2 text-xs text-gray-500 hover:text-primary">
-              <MessageCircle className="h-5 w-5 mb-1" /> Coach
-            </Link>
-          </nav>
+          <MobileNavigation />
         </main>
       </div>
     </ModeProvider>

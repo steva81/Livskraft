@@ -12,7 +12,7 @@ export function conversationTopic(input:string):Topic|null {
   return null
 }
 export function isFollowUp(input:string):boolean {
-  return /^(ja|nej|yes|no|okej|ok|varför|why|hur|how|vad kan jag ta istället|vad kan jag äta istället|what can i have instead|tell me more|berätta mer)([.!? ]|$)/i.test(input.trim())
+  return /^(ja|nej|yes|no|okej|ok|varför|why|hur|how|och imorgon|and tomorrow|vad tycker du istället|what do you suggest instead|jag hann inte göra det|i did not manage it|kan jag köra .+ istället|can i do .+ instead|vad kan jag ta istället|vad kan jag äta istället|what can i have instead|tell me more|berätta mer)([.!? ]|$)/i.test(input.trim())
 }
 export function boundedHistory(history:ConversationMessage[]):ConversationMessage[] {
   return history.slice(-12).map(m=>({role:m.role,text:m.text.slice(0,1000)}))

@@ -71,7 +71,7 @@
   .app-sidebar a { min-height: 44px; border-radius: .75rem; }
   .app-sidebar a[aria-current="page"] { background: #eaf2ec; color: #245d47; }
   .mobile-nav { height: auto; min-height: 72px; padding: 6px 8px max(6px, env(safe-area-inset-bottom)); box-shadow: 0 -4px 24px #203c2d06; }
-  .mobile-nav a { min-height: 52px; min-width: 64px; border-radius: 14px; font-weight: 500; }
+  .mobile-nav a { min-height: 52px; min-width: 0; border-radius: 14px; font-weight: 500; }
   .mobile-nav a[aria-current="page"] { background: #eaf2ec; color: #245d47; }
   .nutrition-panel dl > div { border-radius: 14px; padding: 14px; background: #f3f6f2; }
   .nutrition-panel dd { margin-top: 6px; font-size: 1.125rem; font-variant-numeric: tabular-nums; }

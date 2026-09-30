@@ -9,9 +9,11 @@ import { savedGoalSafety, type GoalInput } from "./goal-safety"
 import { parseStringList, recipeMeetsConstraints, canonicalFoodTerm } from "./dietary"
 import { displayValue } from "./display"
 import { workoutFits, workoutInstructions, type WorkoutCandidate } from "./training"
+import { needsRecentActivity, recentActivityReply, type RecentCoachActivity } from "./coach-activity"
 
 type CoachRecipe = { id:string; title:string; ingredients:string; tags:string; prepTime:number }
 export interface CoachContext {
+  recentActivity?:RecentCoachActivity
   primaryGoal?: PrimaryGoal; nutrition?: Awaited<ReturnType<typeof dailyNutritionForUser>>
   readiness?: {ready:boolean;missing:(keyof typeof readinessLabels.sv)[]}
   goal?: GoalInput
@@ -65,7 +67,7 @@ export async function getCoachReply(input:string,ctx:CoachContext, recentHistory
   // Ground generation in checked advice without passing the full profile or name.
   const safeReply = await fallbackCoachReply(input,{...ctx,userName:""},history)
   const { generateCoachReply } = await import("./coach-provider")
-  return await generateCoachReply(input,ctx.language === "en" ? "en" : "sv",history,safeReply) ?? fallback
+  return await generateCoachReply(input,ctx.language === "en" ? "en" : "sv",history,safeReply,needsRecentActivity(input,history)?ctx.recentActivity:undefined) ?? fallback
 }
 
 async function fallbackCoachReply(input:string,ctx:CoachContext, recentHistory:ConversationMessage[] = []):Promise<string> {
@@ -78,6 +80,10 @@ async function fallbackCoachReply(input:string,ctx:CoachContext, recentHistory:C
   const nutrition=ctx.nutrition, target=nutrition?.target
   const goalText=ctx.primaryGoal ? goalLabels[en?"en":"sv"][ctx.primaryGoal]+". "+goalGuidance(ctx.primaryGoal,en) : ""
   const dangerous=/insulin|dos(?:e|ing)?|medicin|medication|diagnos|treat|behandl|fasta|fasting|starv|svält|straff|punish|skip.*meal|hoppa över/i.test(safetyInput)
+  if (!dangerous && ctx.recentActivity) {
+    const activityReply=recentActivityReply(input,ctx.recentActivity,en)
+    if (activityReply) return activityReply
+  }
   if (!dangerous && ctx.primaryGoal && /protein|musk|muscle|pizza|snack|mellanmål|extra (?:food|mat)|över.*(?:kalori|mål)|over.*(?:calori|target)/i.test(input)) {
     if (/musk|muscle/i.test(input) && !/protein/i.test(input)) return goalText + (en ? ` ${target?`Estimated energy: ${target.calories} kcal/day; protein: ${target.protein} g/day.`:""} Keep resistance training consistent, progress gradually when the current load feels manageable, and allow recovery. Change your primary goal in My Plan if needed.` : ` ${target?`Uppskattad energi: ${target.calories} kcal/dag; protein: ${target.protein} g/dag.`:""} Träna styrka regelbundet, öka gradvis när nuvarande belastning känns hanterbar och ge plats för återhämtning. Ändra huvudmål i Min plan om det behövs.`)
     if (/protein/i.test(input)) {
