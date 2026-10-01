@@ -334,6 +334,8 @@ export const english: Record<string,string> = {
   "Hej": "Hi",
   ", vad behöver du idag?": ", what do you need today?",
   "Nästa måltid:": "Next meal:",
+  "Nästa måltid": "Next meal",
+  "Dagens pass": "Today's training",
   "Träning:": "Training:",
   "av": "of",
   "steg": "steps",

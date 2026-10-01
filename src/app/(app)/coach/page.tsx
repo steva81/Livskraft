@@ -178,7 +178,7 @@ function UserCoachPage() {
                     <Leaf className="w-3.5 h-3.5 text-[#244d36]" /> Coach
                   </div>
                 )}
-                {msg.role==="user"?<span data-localize="off">{msg.text}</span>:<CoachText text={msg.text}/>}
+                {msg.role==="user"?<span data-localize="off">{msg.text}</span>:<CoachText text={msg.id===0?translate(msg.text,language):msg.text}/>}
               </div>
             </div>
           ))}
