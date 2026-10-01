@@ -58,7 +58,7 @@ The two AI flows expand what happens behind the UI. Coach rejects requests if th
 
 ```mermaid
 flowchart TD
-    local["Local development"] --> git["Git<br/>Branch: upgrade-next15"]
+    local["Local development"] --> git["Git<br/>Branch: main"]
     git --> github["GitHub"]
     github --> ec2["AWS EC2<br/>Ubuntu server"]
     ec2 --> build["npm production build"]
