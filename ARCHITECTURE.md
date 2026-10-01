@@ -3,45 +3,53 @@
 ## System architecture
 
 ```mermaid
-flowchart TD
-    browser["User / Web browser"] --> nginx["Nginx on AWS EC2<br/>Ubuntu server"]
+flowchart TB
+    browser["User / Browser"] --> nginx["Nginx on AWS EC2<br/>Ubuntu"]
     nginx --> ui
 
-    subgraph app["Next.js 15 application"]
-        ui["Frontend / UI"] --> backend["Backend API routes<br/>Server logic"]
-        ui --> auth["NextAuth authentication"]
-        backend -->|Check session| auth
-        backend --> prisma["Prisma"] --> db[("SQLite database")]
-        backend --- keys["API keys stay server-side"]
-        db --- data["User-specific data<br/>Profile / preferences<br/>Goals and plans<br/>Meals / nutrition<br/>Body measurements / progress<br/>Coach conversation history"]
+    subgraph app["Next.js 15"]
+        direction TB
+        ui["Frontend / UI<br/>Photos: resize / re-encode<br/>Remove metadata"]
+        backend["Backend / API<br/>API keys stay server-side"]
+        auth["NextAuth"]
+        prisma["Prisma"]
+        db[("SQLite<br/>User profiles / preferences<br/>Goals / plans · Meals / nutrition<br/>Measurements / progress<br/>Coach history")]
+
+        ui --> backend
+        auth --- backend
+        backend --> prisma
+        prisma --> db
     end
 
-    subgraph coach["AI Coach flow"]
-        question["User question"] --> cb["Next.js backend"]
-        cb --> ca["Authentication"]
-        ca --> enabled["AI Coach enabled check"]
-        enabled --> safety["Safety checks"]
-        safety --> context["User context<br/>Recent conversation history"]
-        context --> cg["Gemini AI service<br/>External"]
-        cg --> cr["Validated response<br/>or local fallback"]
-        safety -->|Use local fallback when needed| cr
-        cr --> cu["Response to user"]
+    subgraph coach["AI Coach"]
+        direction TB
+        ca["Authentication<br/>Enabled check"]
+        safety["Safety + user context<br/>Recent conversation"]
+        cg["Gemini · external"]
+        cr["Validated reply / fallback<br/>Shown to user"]
+
+        ca --> safety
+        safety --> cg
+        cg --> cr
+        safety -->|Local fallback| cr
     end
 
-    subgraph photo["Photo AI flow"]
-        food["Food image"] --> resize["Browser resize / re-encode"]
-        resize --> metadata["Metadata removal"]
-        metadata --> pb["Next.js backend"]
-        pb --> iv["Image validation<br/>No permanent raw-image storage"]
-        iv --> pg["Gemini AI service<br/>External"]
-        pg --> json["Structured JSON response"]
-        json --> values["Livskraft validates<br/>food items and nutrition values"]
-        values --> totals["Livskraft calculates totals<br/>from validated items"]
-        totals --> review["User reviews result<br/>before saving"]
+    subgraph photo["Photo AI"]
+        direction TB
+        iv["Image validation<br/>Raw images not stored"]
+        pg["Gemini · external"]
+        json["Structured JSON"]
+        totals["Livskraft validation + totals<br/>Food items / nutrition values"]
+        review["User review<br/>Before saving"]
+
+        iv --> pg
+        pg --> json
+        json --> totals
+        totals --> review
     end
 
-    app ~~~ coach
-    coach ~~~ photo
+    backend -->|User question| ca
+    backend -->|Food image| iv
 ```
 
 The two AI flows expand what happens behind the UI. Coach rejects requests if the user is not signed in or has not enabled AI Coach. Safety checks can select a local fallback instead of calling Gemini. Photo results are estimates that the user reviews before saving. API keys remain on the server, and Livskraft does not permanently store raw food images.
